@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <!-- 引入样式 -->
+    <link rel="stylesheet" href="plugins/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="css/elementui.css">
+    <link rel="stylesheet" href="element/index.css">
+    <style>
+        body {
+            background-color: #fff;
+            width: 99%;
+            margin: 0 !important;
+        }
+        #app {
+            padding:0 10px;
+        }
+
+        .area {
+            border-radius: 10px;
+            padding: 10px;
+            box-shadow: 0 4px 8px #f0f8ff, 0 6px 20px #e7e7e7;
+        }
+
+        .area p{
+            line-height: 40px;
+            font-size: 18px;
+        }
+
+
+    </style>
+</head>
+<body>
+<div id="app">
+    <h1 id="kafka-web-ui-by-lcc">Kafka Web UI By LCC</h1>
+
+    <el-row :gutter="40">
+        <el-col :span="12">
+            <div class="area" style="height: 280px;">
+                <h2 id="项目介绍">项目介绍</h2>
+                <p>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>Kafka Web UI By LCC</strong>
+                    是一个专为简化Apache Kafka集群管理和操作而设计的图形化用户界面（GUI）。该项目旨在为开发者、运维人员和数据科学家提供一个直观且易用的平台，以进行Kafka主题（Topic）管理、消息生产和消费、以及集群监控等任务。通过该工具，用户无需编写复杂的命令行指令，即可轻松完成日常维护工作，并能更有效地监控和优化Kafka集群性能。
+                </p>
+            </div>
+        </el-col>
+        <el-col :span="12">
+            <div class="area" style="height: 280px">
+                <h2 id="开发背景">开发背景</h2>
+
+                <p>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;随着大数据处理需求的增长，Apache Kafka作为一款高性能分布式消息队列系统，被广泛应用于日志收集、流数据分析等领域。然而，传统的命令行工具对于非技术人员来说具有较高的使用门槛。因此，我们开发了Kafka Web UI By LCC，致力于降低Kafka使用的复杂度，提升用户体验。本项目不仅适用于初学者快速上手学习Kafka的基本概念和操作，也为专业用户提供了一个强大的辅助工具，助力其在实际工作中更加高效地管理Kafka集群。
+                </p>
+
+            </div>
+        </el-col>
+    </el-row>
+
+    <div class="area" style="height: 500px;margin-top: 20px">
+        <h2 id="主要功能特性">主要功能特性</h2>
+        <ul>
+            <li><strong>直观的主题管理：</strong>支持创建、编辑和删除Kafka主题，同时提供详细的元数据查看选项。</li>
+            <el-divider></el-divider>
+            <li><strong>消息生产与消费：</strong>内置的消息生产者和消费者工具，允许用户直接从Web界面向主题发送消息或订阅并接收消息。</li>
+            <el-divider></el-divider>
+            <li><strong>全面的集群监控：</strong>实时监控Kafka集群状态，包括但不限于节点状况、数据吞吐速率、内存占用指标等。</li>
+            <el-divider></el-divider>
+            <li><strong>消费者组管理：</strong>便捷地管理和调整消费者组配置，如重置偏移量、检查滞后情况等。</li>
+            <el-divider></el-divider>
+            <li><strong>丰富的可视化图表：</strong>利用图表展示关键性能指标，帮助用户快速理解集群运作模式。</li>
+            <el-divider></el-divider>
+            <li><strong>多环境兼容性：</strong>无论是本地开发环境还是云端部署，Kafka Web UI By LCC都能无缝对接各种规模的Kafka集群。</li>
+        </ul>
+    </div>
+
+    <h2>操作演示</h2>
+
+    <!-- Note: The following image path is a local file path and will not work in web browsers unless the HTML file is opened on the same machine or the path is changed to a web-accessible URL -->
+    <img src="images/home/overview.gif" alt="ezgif-3-09d6bd5705" style="zoom:150%;width: 100%" />
+
+</div>
+</body>
+<script src="js/vue.js"></script>
+<script src="js/axios.js"></script>
+<script src="js/elementui.js"></script>
+<script>
+    new Vue({
+        el: "#app",
+        data() {
+            return {
+
+            }
+        },
+        methods: {
+
+        },
+        created() {
+
+        },
+    });
+</script>
+</html>

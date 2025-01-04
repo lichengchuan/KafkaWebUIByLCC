@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <!-- 引入样式 -->
+    <link rel="stylesheet" href="plugins/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="css/elementui.css">
+    <link rel="stylesheet" href="element/index.css">
+    <style>
+        body {
+            background-color: #fff;
+        }
+        #app {
+            padding:0 10px;
+        }
+        .page {
+            margin-top: 30px;
+            text-align: center;
+        }
+        .table {
+            border: 2px solid #f3f4f7;
+            margin-top: 20px;
+        }
+        .bread {
+            margin-bottom: 20px;
+        }
+        .switch {
+            margin-top: 8px;
+        }
+
+    </style>
+</head>
+<body>
+<div id="app">
+
+    <div class="bread">
+        <el-breadcrumb separator="/">
+            <el-breadcrumb-item><b style="color: #303133">首页</b></el-breadcrumb-item>
+            <el-breadcrumb-item><b style="color: #303133">Message</b></el-breadcrumb-item>
+            <el-breadcrumb-item>消息列表</el-breadcrumb-item>
+        </el-breadcrumb>
+    </div>
+
+    <div class="header">
+        <el-row :gutter="20">
+            <el-col :span="20">
+                <div class="search">
+                    <el-select v-model="topicName" placeholder="请选择Topic" @change="getMessageList">
+                        <el-option
+                                v-for="topic in topicList"
+                                :key="topic.name"
+                                :label="topic.name"
+                                :value="topic.name">
+                        </el-option>
+                    </el-select>
+                    <el-date-picker
+                            v-model="searchDate"
+                            type="datetimerange"
+                            :picker-options="pickerOptions"
+                            range-separator="至"
+                            start-placeholder="开始日期"
+                            end-placeholder="结束日期"
+                            align="right"
+                            @change="getSearchDate"
+                    >
+                    </el-date-picker>
+                </div>
+            </el-col>
+            <el-col :span="4" :offset="12">
+
+            </el-col>
+        </el-row>
+
+
+    </div>
+    <div class="table">
+        <el-table
+                :data="messageList"
+                stripe
+                ref="table"
+                style="width: 100%">
+            <el-table-column
+                    type="index"
+                    width="80">
+            </el-table-column>
+            <el-table-column
+                    prop="date"
+                    label="生成时间"
+                    sortable
+                    :formatter="formatDate"
+            >
+            </el-table-column>
+            <el-table-column
+                    prop="timestamp"
+                    label="时间戳"
+            >
+            </el-table-column>
+            <el-table-column
+                    prop="serializedValueSize"
+                    label="消息大小(字节数)"
+                    sortable
+            >
+                <template slot-scope="scope">
+                    {{ scope.row.serializedValueSize }} Bytes
+                </template>
+            </el-table-column>
+            <el-table-column
+                    prop="offset"
+                    label="偏移量"
+                    sortable
+            >
+            </el-table-column>
+            <el-table-column
+                    label="分区"
+                    :filters="partitionList"
+                    :filter-method="filterHandler"
+            >
+                <template slot-scope="scope">
+                    partition-{{ scope.row.partition }}
+                </template>
+            </el-table-column>
+            <el-table-column label="消息内容">
+                <template slot-scope="scope">
+                    <el-button type="text" icon="el-icon-zoom-in" @click="getMessageByJson(scope.row.value)">以json形式查看</el-button>
+                </template>
+            </el-table-column>
+            <div slot="empty">
+                <el-empty :image-size="200" description='暂无数据(请从上方下拉框挑选"Topic"，加载消息列表)'></el-empty>
+            </div>
+        </el-table>
+    </div>
+
+    <div class="page">
+        <el-pagination
+                @size-change="handleSizeChange"
+                @current-change="handleCurrentChange"
+                :current-page="pageNum"
+                :page-sizes="[8, 20, 50, 100]"
+                :page-size="pageSize"
+                layout="total, sizes, prev, pager, next, jumper"
+                :total="totalData">
+        </el-pagination>
+    </div>
+
+    <el-dialog
+            title="消息预览"
+            :visible.sync="valueVisible"
+            width="30%">
+        <span>{{ valueByJson }}</span>
+        <span slot="footer" class="dialog-footer">
+            <el-button @click="valueVisible = false">关 闭</el-button>
+            <el-button type="primary" @click="copyToClipboard" icon="el-icon-document-copy">复 制</el-button>
+        </span>
+    </el-dialog>
+</div>
+</body>
+<script src="js/vue.js"></script>
+<script src="js/axios.js"></script>
+<script src="js/elementui.js"></script>
+<script src="js/clipboard.min.js"></script>
+<script>
+    new Vue({
+        el: "#app",
+        data() {
+            return {
+                messageList: [],
+                topicList: [],
+                partitionList: [],
+                topicName: "",
+                searchDate:["",""],
+                valueVisible: false,
+                valueByJson:"",
+                pickerOptions: {
+                    shortcuts: [
+                            {
+                                text: '最近一周',
+                                onClick(picker) {
+                                    const end = new Date();
+                                    const start = new Date();
+                                    start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
+                                    picker.$emit('pick', [start, end]);
+                                }
+                            },
+                            {
+                                text: '最近一个月',
+                                onClick(picker) {
+                                    const end = new Date();
+                                    const start = new Date();
+                                    start.setTime(start.getTime() - 3600 * 1000 * 24 * 30);
+                                    picker.$emit('pick', [start, end]);
+                                }
+                            },
+                            {
+                                text: '最近三个月',
+                                onClick(picker) {
+                                    const end = new Date();
+                                    const start = new Date();
+                                    start.setTime(start.getTime() - 3600 * 1000 * 24 * 90);
+                                    picker.$emit('pick', [start, end]);
+                                }
+                            }
+                        ]
+                    },
+                pageNum: 1,
+                pageSize: 8,
+                totalData: 0
+            }
+        },
+        methods: {
+            handleSizeChange(val) {
+                this.pageSize=val;
+                this.pageNum=1;
+                this.resetTableFiltersAndSort()
+                if (this.topicName !== ""){
+                    this.getMessageList()
+                }
+            },
+            handleCurrentChange(val) {
+                this.pageNum=val;
+                this.resetTableFiltersAndSort()
+                if (this.topicName !== ""){
+                    this.getMessageList()
+                }
+            },
+            getMessageList() {
+                if (this.searchDate === null || this.searchDate === []){
+                    this.searchDate = ["",""]
+                }
+                console.log(this.searchDate)
+                axios.get(`/findMessageByTopic?topicName=${this.topicName}&startDate=${this.searchDate[0]}&endDate=${this.searchDate[1]}&pageNum=${this.pageNum}&&pageSize=${this.pageSize}`)
+                .then(response => {
+                    // console.log(JSON.stringify(response.data))
+                    this.messageList = response.data.data
+                    this.totalData = response.data.total;
+                    this.partitionList = []
+                    if (this.messageList.length <= 0){
+                        this.$message({
+                            type: 'info',
+                            message: "抱歉，暂无消息哟"
+                        });
+                        return
+                    }
+                    const partitions = [...new Set(response.data.data.map(item => item.partition))];
+                    for (let i = 0; i < partitions.length; i++) {
+                        let data = {
+                            text: "partition-"+partitions[i],
+                            value: partitions[i]
+                        }
+                        console.log(data)
+                        this.partitionList.push(data)
+                    }
+                })
+            },
+            getTopicList() {
+                axios.get(`/findTopicList?isInternal=false`)
+                    .then(response => {
+                        this.topicList = response.data
+                    })
+            },
+            formatDate(row, column, cellValue, index) {
+                // 处理日期字符串，如果为空，则返回空字符串
+                if (!cellValue) return '';
+
+                // 解析 ISO 格式的日期字符串并格式化
+                const date = new Date(cellValue);
+
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0'); // 获取月份，并补充为两位数
+                const day = String(date.getDate()).padStart(2, '0'); // 获取日期，并补充为两位数
+                const hours = String(date.getHours()).padStart(2, '0'); // 获取小时，并补充为两位数
+                const minutes = String(date.getMinutes()).padStart(2, '0'); // 获取分钟，并补充为两位数
+                const seconds = String(date.getSeconds()).padStart(2, '0'); // 获取秒，并补充为两位数
+
+                return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`; // 返回格式化后的日期
+            },
+            getMessageByJson(value) {
+                this.valueByJson = JSON.stringify(value)
+                this.valueVisible = true
+            },
+            filterHandler(value, row) {
+                return row.partition === value;
+            },
+            getSearchDate(value) {
+                if (value && value.length === 2) {
+                    const [startDate, endDate] = value;
+                    console.log('开始日期:', startDate);
+                    console.log('结束日期:', endDate);
+
+                    // 将日期转换为特定格式，例如 "YYYY-MM-DD HH:mm:ss"
+                    const formatDate = (date) => {
+                        const y = date.getFullYear();
+                        const m = String(date.getMonth() + 1).padStart(2, '0');
+                        const d = String(date.getDate()).padStart(2, '0');
+                        const hh = String(date.getHours()).padStart(2, '0');
+                        const mm = String(date.getMinutes()).padStart(2, '0');
+                        const ss = String(date.getSeconds()).padStart(2, '0');
+                        return `${y}-${m}-${d} ${hh}:${mm}:${ss}`;
+                    };
+
+                    const formattedStartDate = formatDate(startDate);
+                    const formattedEndDate = formatDate(endDate);
+
+                    console.log('格式化开始日期:', formattedStartDate);
+                    console.log('格式化结束日期:', formattedEndDate);
+
+                    this.searchDate = [formattedStartDate,formattedEndDate]
+
+                } else {
+                    console.log('日期范围未选择或已被清空');
+                    this.searchDate = ["",""]
+                }
+                this.resetPageCondition()
+                if (this.topicName !== ""){
+                    this.getMessageList()
+                }
+            },
+            copyToClipboard() {
+
+                // 创建一个临时的 textarea 元素用于保存文本
+                const textarea = document.createElement('textarea');
+                // 设置 textarea 的值为要复制的文本
+                textarea.value = this.valueByJson;
+
+                // 将 textarea 移动到屏幕之外，使其不可见
+                textarea.style.position = 'absolute';
+                textarea.style.left = '-9999px';
+
+                // 将 textarea 添加到文档中
+                document.body.appendChild(textarea);
+
+                // 选择 textarea 中的文本
+                textarea.select();
+
+                try {
+                    // 执行复制命令
+                    const successful = document.execCommand('copy');
+                    // 检查复制是否成功
+                    if (successful) {
+                        this.$message({
+                            type: 'success',
+                            message: '已复制到剪贴板!'
+                        });
+                    } else {
+                        this.$message.error('复制失败');
+                    }
+                } catch (err) {
+                    // 处理复制过程中可能出现的错误
+                    console.error('无法复制文本：', err);
+                }
+
+                // 从文档中移除 textarea
+                document.body.removeChild(textarea);
+
+                this.valueVisible = false
+            },
+            resetPageCondition() {
+                this.pageNum=1
+                this.pageSize=8
+                this.totalData=0
+            },
+            resetTableFiltersAndSort() {
+                // 重置排序
+                const table = this.$refs.table;
+                // 确保 table 和 filters 属性存在
+                if (table && table.clearSort) {
+                    table.clearSort(); // 清除排序
+                }
+
+                if (table && table.clearFilter) {
+                    const filters = table.filters;
+                    if (filters) {
+                        Object.keys(filters).forEach((column) => {
+                            table.clearFilter(column); // 清除列的过滤器
+                        });
+                    }
+                }
+            }
+        },
+        created() {
+            this.getTopicList();
+        },
+    });
+</script>
+</html>

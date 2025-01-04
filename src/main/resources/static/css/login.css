@@ -1,0 +1,41 @@
+html,
+body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+    background: url(../images/login-bg.jpg) no-repeat center;
+    background-size: cover;
+}
+
+.logo {
+    margin-left: 30px;
+    margin-top: 10px;
+}
+
+.logo img {
+    width: 200px;
+    height: 180px;
+}
+
+.login-form {
+    margin: 80px auto;
+    width: 400px;
+    height: 300px;
+    background-color: #fff;
+    padding-top: 20px;
+    padding-right: 25px;
+    border-radius: 10px;
+}
+
+.login-form .content {
+    margin-top: 40px;
+}
+
+.title {
+    font-size: 30px;
+    margin-left: 24%;
+    color: white;
+    letter-spacing: 3px;
+    padding-top: 50px;
+}

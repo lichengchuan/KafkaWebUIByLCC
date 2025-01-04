@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <!-- 引入样式 -->
+    <link rel="stylesheet" href="plugins/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="css/elementui.css">
+    <link rel="stylesheet" href="element/index.css">
+    <style>
+        body {
+            background-color: #fff;
+        }
+        #app {
+            padding: 20px;
+        }
+        .form {
+            width: 1100px;
+            margin: 55px auto;
+        }
+
+        .button {
+            color: #fff;
+            background: linear-gradient(to right, #10cfb4, #b8df90);
+            border-color: #fff;
+        }
+        .button:hover{
+            color: #e3e2e2;
+            border-color: #fff;
+        }
+
+        .form-title {
+            margin-left: 150px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            font-size: 25px;
+            font-weight: bold;
+            color: #5ad6a4;
+            letter-spacing: 2px;
+
+            /* 渐变背景 */
+            background: linear-gradient(to right, #0a9f8a, #c0f886);
+
+            /* 应用渐变到文本 */
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-fill-color: transparent;
+        }
+
+
+        .distribute {
+            width: 100%;
+            height: 500px;
+            background: url("images/broker-bg.jpg");
+            background-size: cover;      /* 确保背景图覆盖整个容器 */
+            background-position: center; /* 将背景图居中显示 */
+            border-radius: 10px;         /* 设置圆角半径，可以根据需要调整 */
+            overflow: hidden;            /* 裁剪超出边界的背景图，保留圆角 */
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+
+    <div class="bread">
+        <el-breadcrumb separator="/">
+            <el-breadcrumb-item><b style="color: #303133">首页</b></el-breadcrumb-item>
+            <el-breadcrumb-item><b style="color: #303133">Topic</b></el-breadcrumb-item>
+            <el-breadcrumb-item>创建Topic</el-breadcrumb-item>
+        </el-breadcrumb>
+    </div>
+
+    <div class="form">
+        <el-row>
+            <el-col :span="10">
+                <div id="distribute" class="distribute"></div>
+            </el-col>
+            <el-col :span="14">
+                <div class="form-title">
+                    <i class="el-icon-edit"></i>
+                    开始创建你的Topic...</div>
+                <el-form :model="addForm" :rules="rules" ref="ruleForm" label-width="130px" class="demo-ruleForm">
+                    <el-form-item label="Topic名称" prop="topicName">
+                        <el-input v-model="addForm.topicName" placeholder="请填写Topic名称"></el-input>
+                    </el-form-item>
+                    <el-form-item label="分区数">
+                        <el-input-number style="width: 60%" v-model="addForm.partitions" :min="1" :max="10" label="请输入分区数"></el-input-number>
+                    </el-form-item>
+                    <el-form-item label="副本数">
+                        <el-input-number style="width: 60%" v-model="addForm.replication" :min="1" :max="brokerNum" label="请输入副本数"></el-input-number>
+                        <el-button type="text" style="color: #f38484" disabled>(不超过broker数量)</el-button>
+                    </el-form-item>
+                    <el-form-item>
+                        <button @click.prevent="submitForm('ruleForm')" class="el-button button">立即创建</button>
+                        <el-button @click="resetForm">重置</el-button>
+                    </el-form-item>
+                </el-form>
+            </el-col>
+        </el-row>
+
+    </div>
+</div>
+</body>
+<script src="js/vue.js"></script>
+<script src="js/axios.js"></script>
+<script src="js/elementui.js"></script>
+<script src="js/echarts.min.js"></script>
+<script>
+    new Vue({
+        el: "#app",
+        data() {
+            return {
+                addForm: {
+                    topicName:"",
+                    partitions:0,
+                    replication:0
+                },
+                brokerNum:0,
+                rules: {
+                    topicName: [
+                        { required: true, message: '请填写Topic名称', trigger: 'change' },
+                    ]
+                }
+            }
+        },
+        methods: {
+            getBrokerNum() {
+                axios.get(`/findNodeListSize`).then(response => {
+                    this.brokerNum = response.data
+                })
+            },
+            submitForm(formName) {
+                console.log("vvvv")
+                this.$refs[formName].validate((valid) => {
+
+                    if (valid) {
+                        axios.post(`/createTopic`,this.addForm).then(response => {
+                            if (response.data!="创建成功"){
+                                this.$message.error(response.data);
+                            }else{
+                                this.$message({
+                                    message: response.data,
+                                    type: 'success'
+                                });
+                            }
+                            this.resetForm()
+                        });
+                    } else {
+                        this.$message({
+                            message: '请完善表单',
+                            type: 'warning'
+                        });
+                        return false;
+                    }
+                });
+            },
+            resetForm() {
+                this.addForm = {
+                    topicName:"",
+                    partitions:0,
+                    replication:0
+                }
+            },
+            loadDistribute() {
+                // 请求 得到可视化结果
+                axios.get(`/findNodeList`).then(response => {
+
+                    console.log(JSON.stringify(response.data))
+
+                    let distribute = echarts.init(document.getElementById("distribute"));
+
+
+                    let nodes = []
+                    let links = []
+                    let nodeCoordinates = this.generateNodeCoordinates(response.data.length);
+                    for (let i = 0; i < response.data.length; i++) {
+                        let nodeData = {
+                            x: nodeCoordinates[i][0],
+                            y: nodeCoordinates[i][1],
+                            name: `${response.data[i].host}:${response.data[i].port}`,
+                            img: 'data-1547632686885-o5Rfi3tyk.png'
+                        }
+                        nodes.push(nodeData)
+
+                        for (let j = 0; j < response.data.length; j++) {
+                            if(j!=i){
+                                let link = {
+                                    source: nodeData.name,  // 源节点名称
+                                    target: `${response.data[j].host}:${response.data[j].port}`,   // 目标节点名称
+                                    name: '连通'
+                                };
+                                links.push(link)
+                            }
+                        }
+                    }
+
+                    console.log(JSON.stringify(nodes))
+                    console.log(JSON.stringify(links))
+
+
+                    var charts = {
+                        nodes: [],
+                        links: [],
+                        linesData: []
+                    }
+                    var dataMap = new Map()
+                    for (var j = 0; j < nodes.length; j++) {
+                        var x = parseInt(nodes[j].x)
+                        var y = parseInt(nodes[j].y)
+                        var node = {
+                            name: nodes[j].name,
+                            value: [x, y],
+                            symbolSize: 25,
+                            alarm: nodes[j].alarm,
+                            //symbol: 'image://./images/' + nodes[j].img,//图片路径
+                            itemStyle: {
+                                normal: {
+                                    color: {
+                                        type: 'linear', // 线性渐变
+                                        x: 0,           // 渐变起点 x 坐标（0-1之间）
+                                        y: 0,           // 渐变起点 y 坐标（0-1之间）
+                                        x2: 1,          // 渐变终点 x 坐标（0-1之间）
+                                        y2: 1,          // 渐变终点 y 坐标（0-1之间）
+                                        colorStops: [
+                                            { offset: 0, color: '#10cfb4' },   // 渐变开始颜色
+                                            { offset: 1, color: '#b8df90' }    // 渐变结束颜色
+                                        ],
+                                        global: false   // 如果为 true，则为全局坐标系；false 为局部坐标系
+                                    },
+                                }
+                            }
+                        }
+                        dataMap.set(nodes[j].name, [x, y])
+                        charts.nodes.push(node)
+                    }
+                    for (var i = 0; i < links.length; i++) {
+                        if (links[i].name == "不连通") {
+                            var link = {
+                                source: links[i].source,
+                                target: links[i].target,
+                                label: {
+                                    normal: {
+                                        show: true,
+                                        formatter: links[i].name
+                                    }
+                                },
+                                lineStyle: {
+                                    normal: {
+                                        color: 'red'
+                                    }
+                                }
+                            }
+                            charts.links.push(link)
+                            // 组装动态移动的效果数据
+                            var lines = [{
+                                coord: dataMap.get(links[i].source)
+                            }, {
+                                coord: dataMap.get(links[i].target)
+                            }]
+                            charts.linesData.push(lines)
+                        } else {
+                            var link = {
+                                source: links[i].source,
+                                target: links[i].target,
+                                label: {
+                                    normal: {
+                                        show: true,
+                                        formatter: links[i].name,
+                                        color: '#b8df90'
+                                    }
+                                },
+                                lineStyle: {
+                                    normal: {
+                                        color: {
+                                            type: 'linear', // 线性渐变
+                                            x: 0,           // 渐变起点 x 坐标（0-1之间）
+                                            y: 0,           // 渐变起点 y 坐标（0-1之间）
+                                            x2: 1,          // 渐变终点 x 坐标（0-1之间）
+                                            y2: 1,          // 渐变终点 y 坐标（0-1之间）
+                                            colorStops: [
+                                                { offset: 0, color: '#10cfb4' },   // 渐变开始颜色
+                                                { offset: 1, color: '#b8df90' }    // 渐变结束颜色
+                                            ],
+                                            global: false   // 如果为 true，则为全局坐标系；false 为局部坐标系
+                                        }
+                                    }
+                                }
+                            }
+                            charts.links.push(link)
+                            // 组装动态移动的效果数据
+                            var lines = [{
+                                coord: dataMap.get(links[i].source)
+                            }, {
+                                coord: dataMap.get(links[i].target)
+                            }]
+                            charts.linesData.push(lines)
+                        }
+                    }
+
+                    let distributeOption = {
+                        title: {
+                            text: 'Broker拓扑图',
+                            left: '20px',     // 距离左侧 20px，可以根据需要调整
+                            top: '10px',      // 距离顶部 20px，可以根据需要调整
+                            textStyle: {
+                                fontWeight: 500,
+                                color: "#fff",
+                                fontSize: 18
+                            }
+                        },
+                        xAxis: {
+                            show: false,
+                            type: 'value'
+                        },
+                        yAxis: {
+                            show: false,
+                            type: 'value'
+                        },
+                        series: [{
+                            type: 'graph',
+                            layout: 'none',
+                            coordinateSystem: 'cartesian2d',
+                            symbolSize: 50,
+                            label: {
+                                normal: {
+                                    show: true,
+                                    position: 'bottom',
+                                    color: '#b8df90'
+                                }
+                            },
+                            lineStyle: {
+                                normal: {
+                                    width: 2,
+                                    shadowColor: 'none'
+                                }
+                            },
+                            edgeSymbol: ['circle', 'arrow'],
+                            edgeSymbolSize: [4, 10],
+                            data: charts.nodes,
+                            links: charts.links,
+                            itemStyle: {
+                                normal: {
+                                    label: {
+                                        show: true,
+                                        formatter: function(item) {
+                                            return item.data.name
+                                        }
+                                    }
+                                }
+                            }
+                        }, {
+                            name: 'A',
+                            type: 'lines',
+                            coordinateSystem: 'cartesian2d',
+                            effect: {
+                                show: true,
+                                trailLength: 0,
+                                symbol: 'arrow',
+                                color: '#b8df90',
+                                symbolSize: 8
+                            },
+                            data: charts.linesData
+                        }]
+                    };
+
+                    distribute.setOption(distributeOption);
+
+                })
+            },
+            generateNodeCoordinates(nodeCount) {
+                const width = 458;
+                const height = 500;
+                const centerX = width / 2;
+                const centerY = height / 2;
+                let coordinates = [];
+
+                if (nodeCount <= 0) return coordinates;
+
+                switch (nodeCount) {
+                    case 1:
+                        // 单个节点放在区域中心
+                        coordinates.push([centerX, centerY]);
+                        break;
+
+                    case 2:
+                        // 两个节点水平放置
+                        coordinates.push([width * 0.25, centerY]);
+                        coordinates.push([width * 0.75, centerY]);
+                        break;
+
+                    case 3:
+                        // 三个节点形成正三角形
+                        coordinates.push([centerX, height * 0.2]);
+                        coordinates.push([width * 0.2, height * 0.8]);
+                        coordinates.push([width * 0.8, height * 0.8]);
+                        break;
+
+                    case 4:
+                        // 四个节点形成矩形
+                        coordinates.push([width * 0.2, height * 0.2]);
+                        coordinates.push([width * 0.8, height * 0.2]);
+                        coordinates.push([width * 0.2, height * 0.8]);
+                        coordinates.push([width * 0.8, height * 0.8]);
+                        break;
+
+                    case 5:
+                        // 五个节点形成五边形
+                        for (let i = 0; i < 5; i++) {
+                            let angle = (2 * Math.PI * i) / 5 - Math.PI / 2;
+                            coordinates.push([
+                                centerX + (width / 3) * Math.cos(angle),
+                                centerY + (height / 3) * Math.sin(angle),
+                            ]);
+                        }
+                        break;
+
+                    case 6:
+                        // 六个节点形成正六边形
+                        for (let i = 0; i < 6; i++) {
+                            let angle = (2 * Math.PI * i) / 6;
+                            coordinates.push([
+                                centerX + (width / 3) * Math.cos(angle),
+                                centerY + (height / 3) * Math.sin(angle),
+                            ]);
+                        }
+                        break;
+
+                    default:
+                        // 如果节点数较多，按照网格分布
+                        let cols = Math.ceil(Math.sqrt(nodeCount));
+                        let rows = Math.ceil(nodeCount / cols);
+                        let xSpacing = width / (cols + 1);
+                        let ySpacing = height / (rows + 1);
+
+                        for (let i = 0; i < nodeCount; i++) {
+                            let col = i % cols;
+                            let row = Math.floor(i / cols);
+                            coordinates.push([(col + 1) * xSpacing, (row + 1) * ySpacing]);
+                        }
+                        break;
+                }
+
+                return coordinates;
+            }
+        },
+        created() {
+            this.getBrokerNum()
+            this.loadDistribute()
+        }
+    });
+</script>
+</html>

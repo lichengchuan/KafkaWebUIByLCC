@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <!-- 引入样式 -->
+    <link rel="stylesheet" href="plugins/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="css/elementui.css">
+    <link rel="stylesheet" href="element/index.css">
+    <script src="js/echarts.min.js"></script>
+    <style>
+        body {
+            height: 100%;
+        }
+        #app {
+            padding:0 10px;
+        }
+        .search{
+            width: 50%;
+            margin-left: 10px;
+        }
+        .table {
+            margin-top: 20px;
+            height: 600px;
+        }
+
+        .left {
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 3px 3px 2px #e7e7e7;
+            padding-top: 20px;
+            padding-bottom: 20px;
+            height: 660px;
+        }
+
+        .right {
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 3px 3px 2px #e7e7e7;
+            height: 700px;
+        }
+
+        .bread {
+            margin-bottom: 20px;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 3px 3px 2px #e7e7e7;
+        }
+
+        .right .title {
+            font-size: 25px;
+            font-weight: bold;
+            border-bottom: 1px solid #d0d1d3;
+            padding-top: 20px;
+            padding-bottom: 20px;
+            color: #303133;
+            text-align: center;
+            background-color: #fff;
+        }
+
+        .sub-title {
+            text-align: left !important;
+            margin-left: 15px;
+            font-size: 18px !important;
+            /* 渐变背景 */
+            background: linear-gradient(to right, #0a9f8a, #c0f886);
+
+            /* 应用渐变到文本 */
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-fill-color: transparent;
+        }
+
+        .right .content {
+            height: 90%;
+        }
+
+        .addPartition {
+            float: right;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+
+    <div class="bread">
+        <el-breadcrumb separator="/">
+            <el-breadcrumb-item><b style="color: #303133">首页</b></el-breadcrumb-item>
+            <el-breadcrumb-item><b style="color: #303133">Topic</b></el-breadcrumb-item>
+            <el-breadcrumb-item>Topic列表</el-breadcrumb-item>
+        </el-breadcrumb>
+    </div>
+
+    <el-row :gutter="20">
+        <el-col :span="9">
+            <div class="left">
+                <div class="search">
+                    <el-select v-model="topicSearchForm.isInternal" placeholder="请选择使用范围" @change="getTopicList">
+                        <el-option label="不限" :value="true"></el-option>
+                        <el-option label="用户创建" :value="false"></el-option>
+                    </el-select>
+                </div>
+                <div class="table">
+                    <el-table
+                            :data="topicList"
+                            stripe
+                            height="100%"
+                            style="width: 100%">
+                        <el-table-column
+                                type="index">
+                        </el-table-column>
+                        <el-table-column
+                                prop="name"
+                                label="name">
+                        </el-table-column>
+                        <el-table-column
+                                label="使用范围">
+                            <template slot-scope="scope">
+                                <el-tag type="danger" v-if="scope.row.isInternal">内置Topic</el-tag>
+                                <el-tag type="success" v-else>用户创建</el-tag>
+                            </template>
+                        </el-table-column>
+                        <el-table-column
+                                label="操作"
+                                width="200"
+                        >
+                            <template slot-scope="scope">
+                                <el-button type="text" @click="getPartition(scope.row.name)" icon="el-icon-share" >Partition分布</el-button>
+                                <el-button type="text" icon="el-icon-delete" @click="handleDelete(scope.row.name)" :style="{ color: scope.row.isInternal ? '#f78989' : 'red' }"  :disabled="scope.row.isInternal==true">删除</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </div>
+            </div>
+        </el-col>
+        <el-col :span="15">
+            <div class="right">
+                <div class="title" v-if="isFirst">Partition拓扑图展示</div>
+                <div class="title" v-else style="text-align: left">
+                    <span class="sub-title">
+                        Topic: {{ partitionSearchForm.topicName }} Partition拓扑图
+                    </span>
+                    <span class="addPartition">
+                        <el-button type="primary" plain icon="el-icon-plus" @click="addPartition">分区扩容</el-button>
+                    </span>
+                </div>
+                <div style="margin-top: 60px" v-if="loading">
+                    <el-empty :image-size="200" description='暂无数据(点击左侧"Partition分布"按钮即可加载拓扑图)'></el-empty>
+                </div>
+                <div class="content">
+                    <div id="partition" style="width: 100%;height: 100%"></div>
+                </div>
+            </div>
+        </el-col>
+    </el-row>
+    <el-dialog title="分区扩容" :visible.sync="partitionFormVisible" width="700px">
+        <el-form :model="addPartitionForm" label-width="150px" class="demo-ruleForm">
+            <el-form-item label="Topic名称">
+                <el-input style="width: 60%" v-model="addPartitionForm.topicName" disabled=""></el-input>
+            </el-form-item>
+            <el-form-item label="分区数">
+                <el-input-number style="width: 60%" v-model="addPartitionForm.num" :min="addPartitionForm.currentPartition" :max="10" label="请输入分区数"></el-input-number>
+                <el-button type="text" style="color: #f38484" disabled>(不低于当前分区数: {{ addPartitionForm.currentPartition }})</el-button>
+            </el-form-item>
+        </el-form>
+        <div slot="footer" class="dialog-footer">
+            <el-button type="primary" @click="submitAddPartition">提 交</el-button>
+            <el-button @click="partitionFormVisible = false;">取 消</el-button>
+        </div>
+    </el-dialog>
+</div>
+</body>
+<script src="js/vue.js"></script>
+<script src="js/axios.js"></script>
+<script src="js/elementui.js"></script>
+<script>
+    new Vue({
+        el: "#app",
+        data() {
+            return {
+                topicList: [],
+                topicSearchForm:{
+                    isInternal:true
+                },
+                partitionSearchForm: {
+                    topicName:""
+                },
+                isFirst: true,
+                loading: true,
+                partitionFormVisible: false,
+                addPartitionForm: {
+                    topicName:"",
+                    num:1,
+                    currentPartition:1
+                }
+            }
+        },
+        methods: {
+            getTopicList() {
+                axios.get(`/findTopicList?isInternal=${this.topicSearchForm.isInternal}`)
+                    .then(response => {
+                        this.topicList = response.data
+                    })
+            },
+            getPartition(topicName) {
+                //查询开始，开启loading效果
+                this.loading = true;
+                this.partitionSearchForm.topicName = topicName
+                // 请求 得到可视化结果
+                axios.get(`/findTopicInfo?topicName=${topicName}`).then(response => {
+
+
+                    console.log(JSON.stringify(response.data))
+                    this.addPartitionForm.topicName = topicName
+                    this.addPartitionForm.num = response.data.length
+                    this.addPartitionForm.currentPartition = response.data.length
+
+
+                    //示例数据
+                    let data = {
+                        "level": 1,
+                        "name": topicName,
+                        "children": []
+                    };
+                    let partition = echarts.init(document.getElementById("partition"));
+
+                    // response.data = data
+                    for (let i = 0; i < response.data.length; i++) {
+                        let leader = response.data[i].leader
+                        let level3replicas = {
+                            "level": 3,
+                            "name": "replicas",
+                            "children": []
+                        }
+                        for (let j = 0; j < response.data[i].replicas.length; j++){
+                            let node = {
+                                "name": `${response.data[i].replicas[j].host}:${response.data[i].replicas[j].port}`,
+                                "isLeader": response.data[i].replicas[j].id===leader.id
+                            }
+                            level3replicas.children.push(node)
+                        }
+
+                        let level3isr = {
+                            "level": 3,
+                            "name": "isr",
+                            "children": []
+                        }
+                        for (let k = 0; k < response.data[i].isr.length; k++){
+                            let node = {
+                                "name": `${response.data[i].isr[k].host}:${response.data[i].isr[k].port}`,
+                                "isLeader": response.data[i].isr[k].id===leader.id
+                            }
+                            level3isr.children.push(node)
+                        }
+
+                        let level2 = {
+                            "level": 2,
+                            "name": "partition"+response.data[i].partitionNum,
+                            "children": [
+                                level3replicas,
+                                level3isr
+                            ]
+                        }
+                        data.children.push(level2)
+                    }
+
+
+
+                    let partitionOption = {
+                        tooltip: {
+                            trigger: 'item',
+                            triggerOn: 'mousemove'
+                        },
+                        series: [{
+                            type: 'tree',
+                            data: [data],
+                            top: '1%',
+                            left: '7%',
+                            bottom: '0.1%',
+                            right: '20%',
+                            symbolSize: 7,
+                            label: {
+                                position: 'left',
+                                verticalAlign: 'middle',
+                                align: 'middle',
+                                fontSize: 12,
+                                lineHeight: 24,
+                                formatter: function(params) {
+                                    if (params.data.level === 1) {
+                                        return '{a|' + params.name + '}'
+                                    } else if (params.data.level === 2) {
+                                        return '{b|' + params.name + '}'
+                                    } else if (params.data.level === 3) {
+                                        return '{c|' + params.name + '}'
+                                    } else {
+                                        console.log(params.isLeader)
+                                        if(!params.data.isLeader==true)
+                                            return '{d|' + params.name + '}'
+                                        else
+                                            return '{e|' + params.name + '（leader）}'
+                                    }
+                                },
+                                rich: {
+                                    a: {
+                                        padding: 6,
+                                        borderRadius: 3,
+                                        color:'#fff',
+                                        backgroundColor: '#546fc6',
+                                        fontSize: 25
+                                    },
+                                    b: {
+                                        padding: 6,
+                                        borderRadius: 3,
+                                        color:'#fff',
+                                        backgroundColor: '#7ab1a6',
+                                        fontSize: 18
+                                    },
+                                    c: {
+                                        padding: 6,
+                                        borderRadius: 3,
+                                        color:'#fff',
+                                        backgroundColor: '#bec985',
+                                        fontSize: 18
+                                    },
+                                    d: {
+                                        padding: 6,
+                                        borderRadius: 3,
+                                        color:'#fff',
+                                        backgroundColor: '#eac663',
+                                        fontSize: 11
+                                    },
+                                    e: {
+                                        padding: 6,
+                                        borderRadius: 3,
+                                        color:'#fff',
+                                        backgroundColor: '#f86a34',
+                                        fontSize: 11
+                                    },
+                                }
+                            },
+                            lineStyle:{
+                                color:'#91cd75'
+                            },
+                            leaves: {
+                                label: {
+                                    position: 'right',
+                                    verticalAlign: 'middle',
+                                    align: 'left'
+                                }
+                            },
+
+                            emphasis: {
+                                focus: 'descendant'
+                            },
+
+                            expandAndCollapse: false,
+                            animationDuration: 550,
+                            animationDurationUpdate: 750
+                        }]
+                    }
+                    partition.setOption(partitionOption);
+
+                    //查询结束，关闭loading效果
+                    this.loading = false;
+                    this.isFirst = false;
+                })
+            },
+            handleDelete(topicName) {
+                this.$confirm('此操作将永久删除该Topic, 是否继续?', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'error'
+                }).then(() => {
+                    axios.delete(`/deleteTopics?topicNameList=${topicName}`).then(response => {
+                        if (response.data=='操作成功'){
+                            this.$message({
+                                type: 'success',
+                                message: response.data
+                            });
+                            this.resetData(topicName)
+                        }else {
+                            this.$message.error(response.data);
+                        }
+                    })
+                }).catch(() => {
+                    this.$message({
+                        type: 'info',
+                        message: '已取消删除'
+                    });
+                });
+            },
+            resetData(topicName){
+                if (topicName===this.partitionSearchForm.topicName){
+                    this.loading = true
+                    this.isFirst = true
+                    this.partitionSearchForm.topicName=""
+                }
+                this.getTopicList()
+            },
+            addPartition(topicName) {
+                // alert(topicName)
+                this.partitionFormVisible = true
+
+            },
+            submitAddPartition() {
+                if (this.addPartitionForm.num<this.addPartitionForm.currentPartition){
+                    this.$message({
+                        message: '请完善表单',
+                        type: 'warning'
+                    });
+                    return
+                }else if (this.addPartitionForm.num===this.addPartitionForm.currentPartition){
+                    this.$message({
+                        message: "操作成功",
+                        type: 'success'
+                    });
+                }else{
+                    axios.get(`/increasePartitions/${this.addPartitionForm.num}/?topicName=${this.addPartitionForm.topicName}`)
+                        .then(response => {
+                            if (response.data!="操作成功"){
+                                this.$message.error(response.data);
+                            }else{
+                                this.$message({
+                                    message: response.data,
+                                    type: 'success'
+                                });
+                            }
+                            this.getPartition(this.addPartitionForm.topicName)
+                        })
+                }
+                this.partitionFormVisible = false
+            }
+        },
+        created() {
+            this.getTopicList()
+        }
+    });
+</script>
+</html>

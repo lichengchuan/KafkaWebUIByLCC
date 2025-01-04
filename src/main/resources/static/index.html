@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Kafka WebUI By LCC</title>
+    <!-- 引入样式 -->
+    <link rel="stylesheet" href="plugins/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/elementui.css">
+    <link rel="stylesheet" href="element/index.css">
+    <style>
+        .el-header {
+            background-color: #B3C0D1;
+            color: #333;
+            line-height: 100px;
+        }
+
+        .el-aside {
+            color: #333;
+        }
+
+        .el-main{
+            padding: 10px !important;
+            background-color: #f3f4f7;
+        }
+
+        html {
+            height: 100%;
+        }
+
+        body {
+            height: 100%;
+        }
+
+        .title {
+            font-size: 24px;
+            font-weight: bold;
+            letter-spacing: 3px;
+            margin-left: 60%;
+        }
+
+        .header{
+            font-size: 12px;
+            color: white;
+            height: 100px !important;
+        }
+
+        .el-header {
+            background: linear-gradient(to right, #10cfb2, #b8df90) !important;
+        }
+
+        .el-menu-item:hover, .el-menu-item.is-active {
+            color: #fff;
+            background: linear-gradient(to right, #10cfb4, #b8df90) !important;
+        }
+        .el-menu-item:hover i{
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+<div id="app" style="height: 100%">
+
+        <el-container style="height: 100%">
+
+
+            <el-header class="header">
+
+                <el-row :gutter="20">
+                    <el-col :span="5">
+                        <div class="logo">
+                            <img src="images/logo.png" alt="" style="width: 200px;height: 100px">
+                        </div>
+                    </el-col>
+                    <el-col :span="19">
+                        <div style="text-align: right;height: 100%">
+                            <el-dropdown>
+                                <i class="el-icon-setting" style="margin-right: 15px"></i>
+                                <el-dropdown-menu slot="dropdown">
+                                    <el-dropdown-item><span @click="logout">注销</span></el-dropdown-item>
+                                </el-dropdown-menu>
+                            </el-dropdown>
+                            <span>{{ userInfo.username }}</span>
+                        </div>
+                    </el-col>
+                </el-row>
+
+
+
+            </el-header>
+            <el-container>
+
+                <el-aside width="200px" style="background-color:#fff;height: 100%">
+                    <el-menu
+                            default-active="1"
+                            class="el-menu-vertical-demo"
+                            active-text-color="#fff"
+                    >
+                        <el-menu-item index="1" @click="iframeUrl='home.html'">
+                            <i class="el-icon-menu"></i>
+                            <span slot="title">首页</span>
+                        </el-menu-item>
+                        <el-menu-item index="2" @click="iframeUrl='dashboard.html'">
+                            <i class="el-icon-view"></i>
+                            <span slot="title">集群监控</span>
+                        </el-menu-item>
+                        <el-submenu index="3">
+                            <template slot="title">
+                                <i class="el-icon-location"></i>
+                                <span>Topic</span>
+                            </template>
+                            <el-menu-item-group >
+                                <el-menu-item index="3-1" @click="iframeUrl='topic.html'">
+                                    <i class="el-icon-s-data"></i>
+                                    <span slot="title">Topic列表</span>
+                                </el-menu-item>
+                                <el-menu-item index="3-2" @click="iframeUrl='createTopic.html'">
+                                    <i class="el-icon-s-promotion"></i>
+                                    <span slot="title">创建Topic</span>
+                                </el-menu-item>
+                            </el-menu-item-group>
+                        </el-submenu>
+                        <el-submenu index="4">
+                            <template slot="title">
+                                <i class="el-icon-s-comment"></i>
+                                <span>Message</span>
+                            </template>
+                            <el-menu-item-group >
+                                <el-menu-item index="4-1" @click="iframeUrl='message.html'">
+                                    <i class="el-icon-s-data"></i>
+                                    <span slot="title">消息列表</span>
+                                </el-menu-item>
+                                <el-menu-item index="4-2" @click="iframeUrl='messageMock.html'">
+                                    <i class="el-icon-edit-outline"></i>
+                                    <span slot="title">Debug 模拟</span>
+                                </el-menu-item>
+                            </el-menu-item-group>
+                        </el-submenu>
+                        <el-menu-item index="5" @click="iframeUrl='consumerGroup.html'">
+                            <i class="el-icon-s-check"></i>
+                            <span slot="title">Consumer Group</span>
+                        </el-menu-item>
+                    </el-menu>
+                </el-aside>
+
+                <el-main>
+
+                    <iframe :src="iframeUrl" frameborder="0" width="100%" height="99%"></iframe>
+
+                </el-main>
+
+            </el-container>
+        </el-container>
+
+</div>
+</body>
+<script src="js/vue.js"></script>
+<script src="js/axios.js"></script>
+<script src="js/elementui.js"></script>
+<script>
+    let app = new Vue({
+        el: "#app",
+        data() {
+            return {
+                iframeUrl: "home.html",
+                userInfo: {}
+            }
+        },
+        methods: {
+            logout() {
+
+                axios.post(`/logout`).then(response => {
+                    if(response.data.code === 1){
+                        localStorage.removeItem('userInfo')
+                        window.location.href = '/login.html'
+                    }
+                })
+
+            }
+        },
+        created() {
+            const userInfo = window.localStorage.getItem('userInfo')
+            if (userInfo) {
+                this.userInfo = JSON.parse(userInfo)
+            }
+        }
+    });
+</script>
+</html>

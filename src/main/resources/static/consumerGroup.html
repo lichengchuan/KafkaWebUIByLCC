@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <!-- 引入样式 -->
+    <link rel="stylesheet" href="plugins/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="css/elementui.css">
+    <link rel="stylesheet" href="element/index.css">
+    <style>
+        #app {
+            padding:0 10px;
+        }
+        .table {
+            border: 2px solid #f3f4f7;
+            margin-top: 20px;
+            height: 580px;
+        }
+        .info-table {
+            border: 2px solid #f3f4f7;
+            margin-top: 20px;
+            height: 250px;
+        }
+        .info-title {
+            font-size: 17px;
+            border-left: 5px solid #0a9f8a;
+            padding-left: 15px;
+            color: #5d626c;
+        }
+        .bread {
+            margin-bottom: 20px;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 3px 3px 2px #e7e7e7;
+        }
+        .switch {
+            margin-top: 8px;
+        }
+
+        .content {
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 3px 3px 2px #e7e7e7;
+            padding: 20px;
+            height: 1100px;
+        }
+
+        .info-panel {
+            background-color: #f1fbf6;
+            width: 90%;
+            height: 120px;
+            margin: 0 auto;
+            border-radius: 10px;
+            padding: 10px;
+        }
+
+        .info-panel .info-panel-icon {
+            width: 80%; /* 设置宽度 */
+            height: 120px; /* 设置高度 */
+            display: inline-block; /* 使span能够使用背景图 */
+            background-size: contain; /* 使图片完全包含在元素内 */
+            background-position: center; /* 居中显示 */
+            background-repeat: no-repeat; /* 不重复 */
+        }
+
+
+        .info-panel .info-panel-content-title {
+            font-size: 17px;
+            color: #777c8e;
+            line-height: 50px;
+        }
+
+        .info-panel .info-panel-content-data {
+            font-size: 22px;
+            color: #45414f;
+            line-height: 40px;
+            white-space: nowrap; /* 确保文本在一行显示 */
+            overflow: hidden; /* 隐藏溢出的内容 */
+            text-overflow: ellipsis; /* 用...代替隐藏的内容 */
+            width: 100%;
+        }
+
+
+    </style>
+</head>
+<body>
+<div id="app">
+
+    <div class="bread">
+        <el-breadcrumb separator="/">
+            <el-breadcrumb-item><b style="color: #303133">首页</b></el-breadcrumb-item>
+            <el-breadcrumb-item>ConsumerGroup</el-breadcrumb-item>
+        </el-breadcrumb>
+    </div>
+
+    <div class="content">
+        <el-tabs v-model="activeName" @tab-click="tabChangeClick">
+            <el-tab-pane name="first">
+                <span slot="label"><i class="el-icon-s-data"></i> 消费者组列表</span>
+                <div class="table">
+                    <el-table
+                            :data="consumerGroupList"
+                            stripe
+                            height="100%"
+                            style="width: 100%">
+                        <el-table-column
+                                type="index"
+                                width="80">
+                        </el-table-column>
+                        <el-table-column
+                                prop="groupId"
+                                label="消费者组id"
+                                width="500"
+                        >
+                        </el-table-column>
+                        <el-table-column
+                                label="组类型"
+                        >
+                            <template slot-scope="scope">
+                                <el-tooltip content="指消费者组中只有一个消费者，且该消费者没有分区分配的逻辑" placement="top-start" v-if="scope.row.simpleConsumerGroup">
+                                    <el-tag effect="dark" type="warning">简单消费组</el-tag>
+                                </el-tooltip>
+                                <el-tooltip content="指消费者组中存在多个消费者，能够正常分区分配" placement="top-start" v-else>
+                                    <el-tag effect="dark">正式消费组</el-tag>
+                                </el-tooltip>
+                            </template>
+                        </el-table-column>
+                        <el-table-column
+                                label="状态"
+                        >
+                            <template slot-scope="scope">
+                                <el-tooltip v-if="scope.row.state=='Stable'" content="消费者组已稳定，分区分配已完成" placement="top-start">
+                                    <el-tag>Stable</el-tag>
+                                </el-tooltip>
+                                <el-tooltip v-if="scope.row.state=='Empty'" content="消费者组中没有任何活跃成员" placement="top-start">
+                                    <el-tag type="warning">Empty</el-tag>
+                                </el-tooltip>
+                                <el-tooltip v-if="scope.row.state=='CompletingRebalance'" content="消费者组正在完成分区重新分配" placement="top-start">
+                                    <el-tag type="info">CompletingRebalance</el-tag>
+                                </el-tooltip>
+                                <el-tooltip v-if="scope.row.state=='PreparingRebalance'" content="消费者组准备进行分区重新分配" placement="top-start">
+                                    <el-tag type="success">PreparingRebalance</el-tag>
+                                </el-tooltip>
+                                <el-tooltip v-if="scope.row.state=='Dead'" content="消费者组已被删除或不再活跃" placement="top-start">
+                                    <el-tag type="danger">Dead</el-tag>
+                                </el-tooltip>
+                            </template>
+                        </el-table-column>
+                        <el-table-column
+                                label="分区分配策略"
+                        >
+                            <template slot-scope="scope">
+                                <el-tooltip v-if="scope.row.partitionAssignor=='range'" content="分区分配策略：按范围分配" placement="top-start">
+                                    <el-tag effect="plain" type="warning">range</el-tag>
+                                </el-tooltip>
+                                <el-tooltip v-if="scope.row.partitionAssignor=='roundrobin'" content="分区分配策略：轮询分配" placement="top-start">
+                                    <el-tag effect="plain" type="info">roundrobin</el-tag>
+                                </el-tooltip>
+                                <el-tooltip v-if="scope.row.partitionAssignor=='sticky'" content="分区分配策略：粘性分配" placement="top-start">
+                                    <el-tag effect="plain" type="success">sticky</el-tag>
+                                </el-tooltip>
+                                <el-tag effect="plain" type="info" v-if="scope.row.partitionAssignor==''">暂无消费者</el-tag>
+                            </template>
+                        </el-table-column>
+                        <el-table-column
+                                label="操作"
+                        >
+                            <template slot-scope="scope">
+                                <el-button type="text" icon="el-icon-s-custom" @click="handleConsumerInfo(scope.row.groupId)">消费详情</el-button>
+                                <el-button type="text" icon="el-icon-delete" :style="{ color: 'red' }" @click="consumerGroupDelete(scope.row.groupId)">删除</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </div>
+            </el-tab-pane>
+            <el-tab-pane name="second">
+                <span slot="label"><i class="el-icon-s-custom"></i> 消费详情</span>
+                <el-empty description='暂无数据(请在"消费者组列表"中选择消费组)' :image-size="200" v-if="consumerClientList.length==0 && consumerGroupPartitionList.length==0"></el-empty>
+                <div v-else>
+                    <div style="margin-top: 20px;margin-bottom: 35px">
+                        <el-row :gutter="25">
+                            <el-col :span="6">
+                                <div class="info-panel">
+                                    <el-row>
+                                        <el-col :span="6">
+                                            <span class="info-panel-icon" style="background-image: url('images/consumerGroup/group.png')"></span>
+                                        </el-col>
+                                        <el-col :span="18">
+                                            <div style="margin-top: 10px">
+                                                <div class="info-panel-content-title">消费者组</div>
+                                                <el-tooltip class="item" effect="dark" :content="consumerInfo.consumerGroupInfoGroupId" placement="top-start">
+                                                    <div class="info-panel-content-data">{{ consumerInfo.consumerGroupInfoGroupId }}</div>
+                                                </el-tooltip>
+                                            </div>
+                                        </el-col>
+                                    </el-row>
+
+                                </div>
+                            </el-col>
+                            <el-col :span="6">
+                                <div class="info-panel">
+                                    <el-row>
+                                        <el-col :span="6">
+                                            <span class="info-panel-icon" style="background-image: url('images/consumerGroup/broker.png')"></span>
+                                        </el-col>
+                                        <el-col :span="18">
+                                            <div style="margin-top: 10px">
+                                                <div class="info-panel-content-title">Broker</div>
+                                                <el-tooltip class="item" effect="dark" :content="consumerInfo.coordinator.host+':'+consumerInfo.coordinator.port" placement="top-start">
+                                                    <div class="info-panel-content-data">{{ consumerInfo.coordinator.host }}:{{ consumerInfo.coordinator.port }}</div>
+                                                </el-tooltip>
+                                            </div>
+                                        </el-col>
+                                    </el-row>
+                                </div>
+                            </el-col>
+                            <el-col :span="6">
+                                <div class="info-panel">
+                                    <el-row>
+                                        <el-col :span="6">
+                                            <span class="info-panel-icon" style="background-image: url('images/consumerGroup/topic.png')"></span>
+                                        </el-col>
+                                        <el-col :span="18">
+                                            <div style="margin-top: 10px">
+                                                <div class="info-panel-content-title">订阅Topic数</div>
+                                                <div class="info-panel-content-data">{{ consumerInfo.consumerGroupInfoTopicNum }}</div>
+                                            </div>
+                                        </el-col>
+                                    </el-row>
+                                </div>
+                            </el-col>
+                            <el-col :span="6">
+                                <div class="info-panel">
+                                    <el-row>
+                                        <el-col :span="6">
+                                            <span class="info-panel-icon" style="background-image: url('images/consumerGroup/consumer.png')"></span>
+                                        </el-col>
+                                        <el-col :span="18">
+                                            <div style="margin-top: 10px">
+                                                <div class="info-panel-content-title">消费者活跃数</div>
+                                                <div class="info-panel-content-data">{{ consumerClientList.length }}</div>
+                                            </div>
+                                        </el-col>
+                                    </el-row>
+                                </div>
+                            </el-col>
+                        </el-row>
+                    </div>
+                    <div class="info-title">分区消费情况
+                        <div style="float: right">
+                            <el-button size="mini" icon="el-icon-refresh" @click="reloadConsumerInfoData">刷新</el-button>
+                        </div>
+                    </div>
+                    <div class="info-table">
+                        <el-table
+                                :data="consumerGroupPartitionList"
+                                stripe
+                                height="100%"
+                                style="width: 100%">
+                            <el-table-column
+                                    label="topic"
+
+                            >
+                                <template slot-scope="scope">
+                                    <el-tag type="primary">{{ scope.row.topic }}</el-tag>
+                                </template>
+                            </el-table-column>
+                            <el-table-column
+                                    label="分区编号"
+                            >
+                                <template slot-scope="scope">
+                                    <el-tag type="success">分区: {{ scope.row.partitionNum }}</el-tag>
+                                </template>
+                            </el-table-column>
+                            <el-table-column
+                                    prop="logEndOffset"
+                                    label="消息末尾偏移量"
+                            >
+                            </el-table-column>
+                            <el-table-column
+                                    prop="committedOffset"
+                                    label="已提交偏移量"
+                            >
+                            </el-table-column>
+                            <el-table-column
+                                    label="消费进度"
+                                    width="400"
+                            >
+                                <template slot-scope="scope">
+                                    <el-tag type="info" v-if="scope.row.logEndOffset===0">null</el-tag>
+                                    <el-progress v-else :stroke-width="11" :percentage="Math.floor((scope.row.committedOffset / scope.row.logEndOffset) * 100)" :color="customColors"></el-progress>
+                                </template>
+                            </el-table-column>
+                            <el-table-column
+                                    label="操作"
+                            >
+                                <template slot-scope="scope">
+                                    <el-button type="text" icon="el-icon-setting" @click="handleUpdateCommittedOffset(scope.row)">修改消费偏移量</el-button>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                    </div>
+                    <div class="info-title" style="margin-top: 15px">消费者组成员列表</div>
+                    <div class="info-table" style="height: 350px">
+                        <el-table
+                                :data="consumerClientList"
+                                stripe
+                                height="100%"
+                                style="width: 100%">
+                            <el-table-column
+                                    type="index"
+                                    width="80">
+                            </el-table-column>
+                            <el-table-column
+                                    prop="memberId"
+                                    label="组内编号"
+                                    width="400"
+                            >
+                            </el-table-column>
+                            <el-table-column
+                                    prop="clientId"
+                                    label="clientId"
+                                    width="350"
+                            >
+                            </el-table-column>
+                            <el-table-column
+                                    label="主机名"
+                                    width="200"
+                            >
+                                <template slot-scope="scope">
+                                    <el-tag effect="plain" type="success">{{ scope.row.host.slice(1) }}</el-tag>
+                                </template>
+                            </el-table-column>
+                            <el-table-column
+                                    label="订阅列表"
+                            >
+                                <template slot-scope="scope">
+                                    <el-tag
+                                            v-for="(partition, index) in scope.row.topicPartitionList"
+                                            :key="partition.partitionNum"
+                                            :type="types[index % types.length]"
+                                            style="margin-right: 5px;margin-bottom: 5px"
+                                    >
+                                        Topic: {{ partition.topic }} - 分区: {{ partition.partitionNum }}
+                                    </el-tag>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                    </div>
+
+                </div>
+            </el-tab-pane>
+        </el-tabs>
+
+
+
+    </div>
+
+    <el-dialog title="偏移量修改" :visible.sync="updateOffsetVisible" width="700px">
+        <el-form :model="updateCommittedOffsetForm" label-width="150px" class="demo-ruleForm">
+            <el-form-item label="消费者组id">
+                <el-input style="width: 60%" v-model="updateCommittedOffsetForm.consumerGroupId" disabled></el-input>
+            </el-form-item>
+            <el-form-item label="Topic">
+                <el-input style="width: 60%" v-model="updateCommittedOffsetForm.topic" disabled></el-input>
+            </el-form-item>
+            <el-form-item label="分区编号">
+                <el-input style="width: 60%" v-model="updateCommittedOffsetForm.partitionNum" disabled></el-input>
+            </el-form-item>
+            <el-form-item label="偏移量">
+                <el-input-number style="width: 60%" v-model="updateCommittedOffsetForm.offset" :min="0" :max="updateCommittedOffsetForm.logEndOffset" label="请输入新的偏移量"></el-input-number>
+                <el-button type="text" style="color: #f38484" disabled>(不超过消息末尾偏移量: {{ updateCommittedOffsetForm.logEndOffset }})</el-button>
+            </el-form-item>
+        </el-form>
+        <div slot="footer" class="dialog-footer">
+            <el-button type="primary" @click="submitUpdateCommittedOffset">提 交</el-button>
+            <el-button @click="resetOffsetForm">取 消</el-button>
+        </div>
+    </el-dialog>
+</div>
+</body>
+<script src="js/vue.js"></script>
+<script src="js/axios.js"></script>
+<script src="js/elementui.js"></script>
+<script>
+    new Vue({
+        el: "#app",
+        data() {
+            return {
+                consumerGroupList: [],
+                activeName: 'first',
+                consumerClientList: [],
+                consumerGroupPartitionList: [],
+                types: ['primary', 'success', 'info', 'warning', 'danger'],
+                customColors: [
+                    {color: '#f56c6c', percentage: 20},
+                    {color: '#e6a23c', percentage: 40},
+                    {color: '#5cb87a', percentage: 60},
+                    {color: '#1989fa', percentage: 80},
+                    {color: '#6f7ad3', percentage: 100}
+                ],
+                updateOffsetVisible: false,
+                updateCommittedOffsetForm: {
+                    consumerGroupId:"",
+                    topic: "",
+                    partitionNum: 0,
+                    logEndOffset: 0,
+                    offset: 0
+                },
+                consumerInfo: {
+                    consumerGroupInfoTopicNum: 0,
+                    consumerGroupInfoGroupId: "",
+                    coordinator: {
+                        id: "",
+                        host: "",
+                        port: -1,
+                        rack: null
+                    }
+                }
+            }
+        },
+        methods: {
+            getConsumerGroupList() {
+                axios.get(`/findConsumerGroupList`)
+                .then(response => {
+                    this.consumerGroupList = response.data
+                    console.log(JSON.stringify(this.consumerGroupList))
+                })
+            },
+            consumerGroupDelete(groupId) {
+                this.$confirm('此操作将永久删除该消费者组, 是否继续?', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'error'
+                }).then(() => {
+                    axios.delete(`/deleteConsumerGroups?consumerGroupIdList=${groupId}`).then(response => {
+                        if (response.data=='操作成功'){
+                            this.$message({
+                                type: 'success',
+                                message: response.data
+                            });
+                            this.getConsumerGroupList()
+                        }else {
+                            this.$message.error(response.data);
+                        }
+                    })
+                }).catch(() => {
+                    this.$message({
+                        type: 'info',
+                        message: '已取消删除'
+                    });
+                });
+            },
+            handleConsumerInfo(groupId) {
+                this.consumerClientList = this.consumerGroupList.find(consumerGroup => consumerGroup.groupId === groupId).members
+                axios.get(`/findConsumerGroupOffset?groupId=${groupId}`)
+                    .then(response => {
+                        console.log(JSON.stringify(response.data))
+                        this.consumerGroupPartitionList = response.data
+                        this.getConsumerGroupInfoTopicNum()
+                        this.getConsumerGroupInfoCoordinator(groupId)
+                        this.consumerInfo.consumerGroupInfoGroupId = groupId
+                    })
+                this.activeName = 'second'
+            },
+            handleUpdateCommittedOffset(data) {
+                this.updateOffsetVisible = true
+                this.updateCommittedOffsetForm.consumerGroupId = data.groupId;
+                this.updateCommittedOffsetForm.topic = data.topic;
+                this.updateCommittedOffsetForm.partitionNum = data.partitionNum;
+                this.updateCommittedOffsetForm.logEndOffset = data.logEndOffset;
+                this.updateCommittedOffsetForm.offset = data.committedOffset;
+                console.log(JSON.stringify(this.updateCommittedOffsetForm))
+            },
+            submitUpdateCommittedOffset() {
+                if (this.updateCommittedOffsetForm.offset>this.updateCommittedOffsetForm.logEndOffset || this.updateCommittedOffsetForm.offset < 0){
+                    this.$message({
+                        message: '请填写合法参数',
+                        type: 'warning'
+                    });
+                    return
+                }
+                axios.post(`/updateCommittedOffset`,this.updateCommittedOffsetForm).then(response => {
+                    if (response.data!=="操作成功"){
+                        this.$message.error(response.data);
+                    }else{
+                        this.$message({
+                            message: response.data,
+                            type: 'success'
+                        });
+                    }
+                    this.handleConsumerInfo(this.updateCommittedOffsetForm.consumerGroupId)
+                    this.resetOffsetForm()
+                });
+            },
+            resetOffsetForm() {
+                this.updateCommittedOffsetForm.consumerGroupId = "";
+                this.updateCommittedOffsetForm.topic = "";
+                this.updateCommittedOffsetForm.partitionNum = 0;
+                this.updateCommittedOffsetForm.logEndOffset = 0;
+                this.updateCommittedOffsetForm.offset = 0;
+                this.updateOffsetVisible = false;
+            },
+            tabChangeClick(tab, event) {
+                if (tab.name === 'first'){
+                    this.resetConsumerInfo()
+                }
+            },
+            resetConsumerInfo() {
+                this.consumerGroupPartitionList = []
+                this.consumerClientList = []
+
+                this.consumerInfo =  {
+                    consumerGroupInfoTopicNum: 0,
+                        consumerGroupInfoGroupId: "",
+                        coordinator: {
+                        id: "",
+                            host: "",
+                            port: -1,
+                            rack: null
+                    }
+                }
+            },
+            getConsumerGroupInfoTopicNum() {
+                // 创建一个Set对象来存储唯一的topic
+                let uniqueTopics = new Set();
+
+                // 遍历consumerGroupPartitionList
+                for (let i = 0; i < this.consumerGroupPartitionList.length; i++) {
+                    let topic = this.consumerGroupPartitionList[i].topic;
+                    // 将每个topic添加到Set中，重复的topic会被自动忽略
+                    uniqueTopics.add(topic);
+                }
+
+                // uniqueTopics的size属性将给出不同topic的数量
+                this.consumerInfo.consumerGroupInfoTopicNum = uniqueTopics.size
+            },
+            getConsumerGroupInfoCoordinator(groupId) {
+                for (let i = 0; i < this.consumerGroupList.length; i++) {
+                    if (this.consumerGroupList[i].groupId === groupId){
+                        this.consumerInfo.coordinator = this.consumerGroupList[i].coordinator
+                        return
+                    }
+                }
+            },
+            reloadConsumerInfoData() {
+                this.handleConsumerInfo(this.consumerInfo.consumerGroupInfoGroupId)
+            }
+        },
+        created() {
+            this.getConsumerGroupList();
+        },
+    });
+</script>
+</html>

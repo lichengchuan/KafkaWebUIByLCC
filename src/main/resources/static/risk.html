@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <!-- 引入样式 -->
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <link rel="stylesheet" href="plugins/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/elementui.css">
+    <style>
+        body {
+            background-color: #fff;
+        }
+        #app {
+            padding: 20px;
+        }
+
+        .form {
+            width: 1200px;
+            margin: 55px auto;
+        }
+
+    </style>
+</head>
+<body>
+<div id="app">
+
+    <div class="bread">
+        <el-breadcrumb separator="/">
+            <el-breadcrumb-item><a href="/">首页</a></el-breadcrumb-item>
+            <el-breadcrumb-item><a href="/">风险评估</a></el-breadcrumb-item>
+        </el-breadcrumb>
+    </div>
+
+    <div class="form">
+        <el-form :model="ruleForm" :rules="rules" ref="ruleForm" label-width="140px" class="demo-ruleForm">
+            <el-form-item label="评估方法" prop="method" placeholder="请选择评估方法" >
+                <el-cascader
+                        style="width: 400px"
+                        v-model="ruleForm.method"
+                        :options="options"
+                        :props="{ expandTrigger: 'hover' }"
+                        @change="methodChange">
+                </el-cascader>
+            </el-form-item>
+
+            <el-form-item label="评估环境" prop="env">
+                <el-select v-model="ruleForm.env" placeholder="请选择评估环境" style="width: 400px">
+                    <el-option label="后台数据库" value="env1"></el-option>
+                    <el-option label="大数据平台" value="env2"></el-option>
+                </el-select>
+            </el-form-item>
+
+            <el-form-item label="请选择评估数据集">
+                <el-table
+                        ref="multipleTable"
+                        :data="tableData"
+                        tooltip-effect="dark"
+                        style="width: 100%"
+                        @selection-change="handleSelectionChange"
+                        max-height="550">
+                    <el-table-column
+                            type="selection"
+                            width="50">
+                    </el-table-column>
+                    <el-table-column
+                            prop="streamTime"
+                            label="消费时间"
+                            width="280">
+                    </el-table-column>
+                    <el-table-column
+                            prop="streamMoney"
+                            label="消费金额(元)"
+                            width="280">
+                    </el-table-column>
+                    <el-table-column
+                            prop="streamSignLocation"
+                            label="注册地"
+                            width="280"
+                    >
+                    </el-table-column>
+                    <el-table-column
+                            prop="streamConsumeLocation"
+                            label="消费地"
+                    >
+                    </el-table-column>
+                </el-table>
+            </el-form-item>
+
+            <el-form-item>
+                <el-button type="primary" @click="submitForm('ruleForm')">立即评估</el-button>
+                <el-button @click="resetForm('ruleForm')">重置</el-button>
+            </el-form-item>
+        </el-form>
+    </div>
+
+    <div
+            v-loading.fullscreen.lock="fullscreenLoading"
+            element-loading-text="拼命加载中"
+            element-loading-spinner="el-icon-loading"
+            element-loading-background="rgba(0, 0, 0, 0.8)"
+    >
+    </div>
+
+
+</div>
+</body>
+<script src="js/vue.js"></script>
+<script src="js/axios.js"></script>
+<script src="js/elementui.js"></script>
+<script src="js/moment.js"></script>
+<script src="js/jquery.min.js"></script>
+<script>
+    new Vue({
+        el: "#app",
+        data() {
+            return {
+                fullscreenLoading: false,
+                tableData: [],
+                method: [],
+                options: [
+                    {
+                        value: 'rule',
+                        label: '规则',
+                        children: [
+                            {
+                                value: '1',
+                                label: '60s消费间隔'
+                            }, {
+                                value: '2',
+                                label: '异地消费间隔'
+                            }, {
+                                value: '3',
+                                label: '消费频次'
+                            }
+                        ]
+                    },
+                    {
+                        value: 'model',
+                        label: '模型',
+                        children: [
+                            {
+                                value: '1',
+                                label: 'xgboost'
+                            },
+                            {
+                                value: '2',
+                                label: 'gbdt'
+                            },
+                            {
+                                value: '3',
+                                label: 'lr'
+                            },
+                            {
+                                value: '4',
+                                label: 'svm'
+                            },
+                            {
+                                value: '5',
+                                label: 'rf'
+                            },
+                            {
+                                value: '6',
+                                label: 'cart'
+                            }
+                        ]
+                    }
+                ],
+                dataIds: [],
+                ruleForm: {
+                    method: '',
+                    env: '',
+                    date1: '',
+                    date2: '',
+                    delivery: false,
+                    dataIds: '',
+                    modelId: ''
+                },
+                rules: {
+                    method: [
+                        { required: true, message: '请选择评估方法', trigger: 'change' }
+                    ],
+                    env: [
+                        { required: true, message: '请选择评估环境', trigger: 'change' }
+                    ]
+                }
+            }
+        },
+        methods: {
+            submitForm(formName) {
+                this.$refs[formName].validate((valid) => {
+                    if (valid && this.dataIds.length>0) {
+
+                        for (let i = 0; i < this.dataIds.length; i++) {
+                            if ((i+1)!=this.dataIds.length){
+                                this.ruleForm.dataIds += (this.dataIds[i].streamId+",")
+                            }else {
+                                this.ruleForm.dataIds += (this.dataIds[i].streamId+"")
+                            }
+                        }
+
+
+
+                        this.ruleForm.modelId = this.ruleForm.method[1];
+
+                        var that = this;
+
+                        this.fullscreenLoading = true;
+
+                        if (this.ruleForm.method[0]=='rule'){
+                            axios.post(`/rule/test`,this.ruleForm).then(response => {
+                                localStorage.setItem("dataIds", that.ruleForm.dataIds)
+                                location.href="risk-result.html"
+                                that.fullscreenLoading = false;
+                            });
+                        }else {
+                            $.ajax({
+                                type: 'post',
+                                url: `http://10.16.108.91:10408/${that.ruleForm.method[0]}/test`,
+                                data: that.ruleForm,
+                                success : function (res) {
+                                    localStorage.setItem("dataIds", that.ruleForm.dataIds)
+                                    location.href="risk-result.html"
+                                    that.fullscreenLoading = false;
+                                }
+                            })
+                        }
+
+
+
+
+
+
+                        console.log(this.ruleForm);
+
+                    } else {
+                        alert("请完善表单")
+                        console.log('error submit!!');
+                        return false;
+                    }
+                });
+            },
+            resetForm(formName) {
+                this.$refs[formName].resetFields();
+            },
+            methodChange(){
+                console.log(this.ruleForm.method);
+            },
+            handleSelectionChange(val) {
+                console.log(val);
+                this.dataIds = val;
+            },
+            getList() {
+                axios.get(`/risk/list`).then(response => {
+                    let data = response.data.data
+                    //格式转换
+                    for (let i = 0; i < data.length; i++) {
+                        data[i].streamTime = moment(data[i].streamTime).format('YYYY-MM-DD HH:mm:ss');
+                        data[i].streamConsumeLocation = data[i].streamConsumeLocation.replaceAll(",","-")
+                    }
+                    this.tableData = data
+                })
+            },
+            getModelList() {
+                axios.get(`/models/list`).then(response => {
+                    let data = response.data.data
+                    let children = []
+                    for (let i = 0; i < data.length; i++) {
+                        let tmp = {
+                            value:data[i].number,
+                            label:data[i].modelName
+                        }
+                        children.push(tmp)
+                    }
+                    this.options[1].children = children;
+                })
+            }
+        },
+        created() {
+            this.getList()
+            this.getModelList()
+        }
+    });
+</script>
+</html>

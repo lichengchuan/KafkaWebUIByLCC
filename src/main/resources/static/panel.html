@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" href="fonts/icomoon.css">
+    <link rel="stylesheet" href="css/index.css">
+    <script src="js/echarts.min.js"></script>
+    <script src="js/flexible.js"></script>
+    <script src="js/jquery.min.js"></script>
+    <script src="js/china.js"></script>
+    <script src="js/vue.js"></script>
+    <script src="js/axios.js"></script>
+    <script src="js/elementui.js"></script>
+    <style>
+        .overview .inner span {
+            font-size: 14px;
+        }
+
+        .data .item span {
+            font-size: 14px;
+        }
+
+        /* 通过CSS3动画滚动marquee */
+        .marquee-view .marquee {
+            animation: move 15s linear infinite;
+        }
+        @keyframes move {
+            0% {
+            }
+            100% {
+                transform: translateY(-50%);
+            }
+        }
+        /* 3.鼠标经过marquee 就停止动画 */
+        .marquee-view .marquee:hover {
+            animation-play-state: paused;
+        }
+    </style>
+</head>
+<body>
+<div class="viewport" id="app">
+    <div class="column">
+        <div class="panel overview">
+            <div class="inner">
+                <ul>
+                    <li>
+                        <h4>{{ (overView.totalMoney/10000000).toFixed(1) }}</h4>
+                        <span>
+                                <i class="icon-dot"></i>
+                                消费金额(千万元)
+                        </span>
+                    </li>
+                    <li class="item">
+                        <h4>{{ overView.users }}</h4>
+                        <span>
+                                <i class="icon-dot" style="color: #6acca3"></i>
+                                消费人数
+                            </span>
+                    </li>
+                    <li>
+                        <h4>{{ overView.places }}</h4>
+                        <span>
+                                <i class="icon-dot" style="color: #6acca3"></i>
+                                消费地点
+                            </span>
+                    </li>
+                    <li>
+                        <h4>{{ overView.totalNums }}</h4>
+                        <span>
+                                <i class="icon-dot" style="color: #ed3f35"></i>
+                                消费总次数
+                            </span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div class="panel monitor">
+            <div class="inner">
+                <div class="tabs">
+                    <a href="javascript:;" class="active">异常消费监控</a>
+                </div>
+                <div class="content" style="display: block">
+                    <div class="head">
+                        <span class="col">消费时间</span>
+                        <span class="col">消费地点</span>
+                        <span class="col">消费金额(元)</span>
+                    </div>
+                    <div class="marquee-view">
+                        <div class="marquee" id="marquee_move">
+                            <div class="row" v-for="item in normalData">
+                                <span class="col">{{ item.streamTimeMinute }}</span>
+                                <span class="col">{{ item.streamConsumeLocation }}</span>
+                                <span class="col">{{ item.streamMoney }}</span>
+                                <span class="icon-dot"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- 点位 -->
+        <div class="point panel">
+            <div class="inner">
+                <h3>消费类型统计</h3>
+                <div class="chart">
+                    <div class="pie"></div>
+                    <div class="data">
+                        <div class="item">
+                            <h4>{{ pieTitle }}</h4>
+                            <span>
+                                      <i class="icon-dot" style="color: #ed3f35"></i>
+                                      Top1
+                                </span>
+                        </div>
+                        <div class="item">
+                            <h4>{{ pieTypeNums }}</h4>
+                            <span>
+                                      <i class="icon-dot" style="color: #eacf19"></i>
+                                      消费类型数
+                                </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="column">
+        <!-- 地图 -->
+        <div class="map">
+            <h3>
+                <span class="icon-cube"></span>
+                异常消费分布
+            </h3>
+            <div class="chart">
+                <div class="geo"></div>
+            </div>
+        </div>
+        <!-- 用户 -->
+        <div class="users panel">
+            <div class="inner">
+                <h3>注册地消费总量(Top13)</h3>
+                <div class="chart">
+                    <div class="bar"></div>
+                    <div class="data">
+                        <div class="item">
+                            <h4>{{ (overView.totalMoney/10000).toFixed(1) }}</h4>
+                            <span>
+                                  <i class="icon-dot" style="color: #ed3f35"></i>
+                                  消费总量(万元)
+                                </span>
+                        </div>
+                        <div class="item">
+                            <h4>{{ maxCity }}</h4>
+                            <span>
+                                  <i class="icon-dot" style="color: #eacf19"></i>
+                                  Top1
+                                </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="column">
+        <!-- 订单 -->
+        <div class="order panel">
+            <div class="inner">
+                <!-- 筛选 -->
+                <div class="filter">
+                    <a href="javascript:;" :class="{ active: normalByTimeIndex==0 }" @click="normalByTime('morning')">早</a>
+                    <a href="javascript:;" :class="{ active: normalByTimeIndex==1 }" @click="normalByTime('noon')">中</a>
+                    <a href="javascript:;" :class="{ active: normalByTimeIndex==2 }" @click="normalByTime('night')">晚</a>
+                </div>
+                <!-- 数据 -->
+                <div class="data">
+                    <div class="item">
+                        <h4>{{ normalByTimeData.totalCount }}</h4>
+                        <span>
+                                <i class="icon-dot" style="color: #ed3f35;"></i>
+                                总订单数
+                        </span>
+                    </div>
+                    <div class="item">
+                        <h4>{{ normalByTimeData.notNormalCount }}</h4>
+                        <span>
+                                <i class="icon-dot" style="color: #eacf19;"></i>
+                                异常消费数
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- 销售额 -->
+        <div class="sales panel">
+            <div class="inner">
+                <div class="caption">
+                    <h3>销售额统计</h3>
+                    <a href="javascript:;" :class="{ active: morningIsActive }" @click="morning">早</a>
+                    <a href="javascript:;" :class="{ active: noonIsActive }" @click="noon">中</a>
+                    <a href="javascript:;" :class="{ active: nightIsActive }" @click="night">晚</a>
+                </div>
+                <div class="chart">
+                    <div class="label">单位:千万</div>
+                    <div class="line"></div>
+                </div>
+            </div>
+        </div>
+        <!-- 渠道 季度 -->
+        <div class="wrap">
+            <div class="channel panel">
+                <div class="inner">
+                    <h3>注册地分布</h3>
+                    <div class="data">
+                        <div class="radar"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="quarter panel">
+                <div class="inner">
+                    <h3>异常消费占比</h3>
+                    <div class="chart">
+                        <div class="box">
+                            <div class="gauge"></div>
+                            <div class="label">{{ normalPercentData.percent }}<small> %</small></div>
+                        </div>
+                        <div class="data">
+                            <div class="item">
+                                <h4>{{ normalPercentData.totalCount }}</h4>
+                                <span>
+                                      <i class="icon-dot" style="color: #6acca3"></i>
+                                      总消费数
+                                    </span>
+                            </div>
+                            <div class="item">
+                                <h4>{{ normalPercentData.notNormalCount }}</h4>
+                                <span>
+                                      <i class="icon-dot" style="color: #ed3f35"></i>
+                                      异常消费数
+                                    </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- 排行榜 -->
+        <div class="top panel">
+            <div class="inner">
+                <div class="all">
+                    <h3>全国热榜</h3>
+                    <ul>
+
+                        <li v-for="(item,index) in nationHot">
+                            <i class="icon-cup1" style="color: #d93f36;" v-if="index==0"></i>
+                            <i class="icon-cup2" style="color: #68d8fe;" v-if="index==1"></i>
+                            <i class="icon-cup3" style="color: #4c9bfd;" v-if="index==2"></i>
+                            {{ item.name }}
+                        </li>
+
+                    </ul>
+                </div>
+                <div class="province">
+                    <h3>各省热销 </h3>
+                    <div class="data">
+                        <ul class="sup">
+
+                            <li v-for="(item,index) in hotProvince" :class="{ active: index==provinceActiveIndex }" @mouseenter="provinceChange(item.city,index)">
+                                <span >{{ item.city+" " }}</span>
+                                <span> ￥{{ (item.sales/1000000).toFixed(1) }} </span>
+                            </li>
+
+                        </ul>
+                        <ul class="sub">
+                            <li v-for="(item) in hotSale">
+                                <span>{{ item.name+" " }} </span>
+                                <span> ￥{{ (item.num/1000000).toFixed(1) }} </span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    let app = new Vue({
+        el: "#app",
+        data(){
+            return {
+                overView: {
+                    places:0,
+                    totalMoney:0,
+                    totalNums:0,
+                    users:0
+                },
+                nationHot:[],
+                hotProvince:[],
+                hotSale:[],
+                normalData:[],
+                lineXData:[],
+                lineData: {
+                    morning: ["1h","2h","3h","4h","5h","6h","7h","8h"],
+                    noon: ["9h","10h","11h","12h","13h","14h","15h","16h"],
+                    night: ["17h","18h","19h","20h","21h","22h","23h","24h"]
+                },
+                morningIsActive: false,
+                noonIsActive: false,
+                nightIsActive: false,
+                provinceActiveIndex: 0,
+                normalPercentData: {
+                    totalCount: 0,
+                    notNormalCount: 0,
+                    percent: 0,
+                },
+                normalByTimeData: {
+                    totalCount: 0,
+                    notNormalCount: 0,
+                },
+                pieTitle:"",
+                pieTypeNums:0,
+                maxCity:"",
+                normalByTimeIndex:0,
+                time:'morning',
+            }
+        },
+        methods: {
+            initData() {
+                this.view();
+                this.radar();
+                this.pie();
+                this.bar();
+                this.top();
+                this.line();
+                this.hot();
+                this.normal();
+                this.normalPercent();
+                this.normalByTime(this.time);
+            },
+            view() {
+                axios.get(`/show/overview`).then(response => {
+                    this.overView.places = response.data.data.places;
+                    this.overView.totalMoney = response.data.data.totalMoney;
+                    this.overView.totalNums = response.data.data.totalNums;
+                    this.overView.users = response.data.data.users;
+
+                    console.log("overView如下：")
+                    console.log(this.overView)
+                })
+            },
+            radar() {
+
+                axios.get(`/show/sign`).then(response => {
+                    let data = response.data.data;
+                    let locations = [];
+                    let nums = [];
+                    for (let i = 0; i < data.length; i++) {
+                        if (i>=6){
+                            break;
+                        }
+                        let item = { name: data[i].streamSignLocation.substr(0,2), max: 50 }
+                        locations.push(item);
+                        nums.push(data[i].nums);
+                    }
+                    let maxValue = Math.max(...nums)
+                    for (let i = 0; i < locations.length; i++) {
+                        locations[i].max = maxValue+5;
+                    }
+
+                    // 1. 实例化对象
+                    var radarChart = echarts.init(document.querySelector(".radar"));
+                    // 2.指定配置
+                    var radar_option = {
+                        tooltip: {
+                            show: true,
+                            // 控制提示框组件的显示位置
+                            position: ['60%', '10%'],
+                        },
+                        radar: {
+                            center: ['50%', '50%'],
+                            indicator: locations,
+                            radius: "65%",
+                            shape: "circle",
+                            splitNumber: 4,
+                            name: {
+                                textStyle: {
+                                    color: "#4c9bfd"
+                                }
+                            },
+                            splitLine: {
+                                lineStyle: {
+                                    color: "rgba(255,255,255,0.5)"
+                                }
+                            },
+                            splitArea: {
+                                show: false
+                            },
+                            axisLine: {
+                                lineStyle: {
+                                    color: "rgba(250, 250, 250, 0.5)"
+                                }
+                            }
+                        },
+                        series: [
+                            {
+                                name: "注册地",
+                                type: "radar",
+                                lineStyle: {
+                                    normal: {
+                                        color: '#fff',
+                                        // width: 1
+                                    }
+                                },
+                                data: [nums],
+                                symbol: "circle",
+                                symbolSize: 5,
+                                // 小圆点（拐点）设置为白色
+                                itemStyle: {
+                                    color: '#fff'
+                                },
+                                // 在圆点上显示相关数据
+                                label: {
+                                    show: true,
+                                    color: '#fff',
+                                    fontSize: 10
+                                },
+                                areaStyle: {
+                                    color: "rgba(238, 197, 102, 0.6)"
+                                }
+                            }
+                        ]
+                    };
+                    // 3.把配置和数据给对象
+                    radarChart.setOption(radar_option);
+
+                    window.addEventListener("resize", function () {
+                        radarChart.resize();
+                    })
+
+                })
+
+
+            },
+            pie() {
+                axios.get(`/show/type`).then(response => {
+                    let type = [
+                        [5812,5811,5813],
+                        [7011,4722,5561],
+                        [5941,7941,7997,7933,7992],
+                        [5732],
+                        [4816,5374,7372],
+                        [7911,7932,5813],
+                        [5631,5977,7298],
+                        [5611],
+                        [5013,5021,5039,5044,5045,5046,5047,5051,5065,5074,5072,5193,5111,5122,5131,5137,5139,5172,5192,5198,5998,5398,4458],
+                        [5541,5542]
+                    ]
+                    let type_arr = ["美食","旅游","体育","电子","IT","年轻活力","女性","男性","商人","开车一族"]
+                    let data = response.data.data;
+                    let values = [];
+                    let places=[];
+                    for (let i = 0; i < data.length; i++) {
+                        if (values.length>=9){
+                            break;
+                        }
+                        let index=-1;
+                        for (let j = 0; j < 10; j++) {
+                            if (type[j].includes(data[i].streamConsumeType)){
+                                panel=j;
+                            }
+                        }
+                        if (panel==8)continue;//过滤掉 “商人” 类型
+                        let num=places.indexOf(type_arr[panel])
+                        if (num==-1){
+                            let item = { name: type_arr[panel], value: data[i].nums }
+                            values.push(item);
+                            places.push(type_arr[panel])
+                        }else{
+                            values[num].value+=data[i].nums;
+                        }
+                    }
+                    let maxData = {name:"",value:0}
+                    for (let i = 0; i < values.length; i++) {
+                        if (maxData.value<values[i].value){
+                            maxData.name = values[i].name;
+                            maxData.value = values[i].value;
+                        }
+                    }
+
+                    this.pieTitle = maxData.name;
+                    this.pieTypeNums = values.length;
+
+
+
+                    // 饼图部分
+                    var pieChart = echarts.init(document.querySelector(".pie"));
+                    var pie_option = {
+                        tooltip: {
+                            trigger: 'item',
+                            formatter: '{a} <br/>{b} : {c} ({d}%)'
+                        },
+                        color: ['#006cff', '#60cda0', '#ed8884', '#ff9f7f', '#0096ff', '#9fe6b8', '#32c5e9', '#1d9dff'],
+                        series: [
+                            {
+                                name: 'Area Mode',
+                                type: 'pie',
+                                radius: ["10%", "70%"],
+                                center: ['50%', '50%'],
+                                roseType: 'radius',
+                                data: values,
+                                label: {
+                                    fontSize: 10
+                                },
+                                labelLine: {
+                                    length: 6,
+                                    length2: 8
+                                }
+                            }
+                        ]
+                    };
+                    pieChart.setOption(pie_option);
+                    // 设置图表可随着浏览器大小等比例缩放调整
+                    window.addEventListener("resize", function () {
+                        pieChart.resize();
+                    })
+                })
+
+
+
+            },
+            bar() {
+
+                axios.get(`/show/consumeTop13`).then(response => {
+
+                    let data = response.data.data;
+
+                    let xData = [];
+                    let yData = [];
+                    for (let i = 0; i < data.length; i++) {
+                        yData.push(Math.round(data[i].totalMoney/10000));
+                        xData.push(data[i].stream_sign_location.substr(0,2));
+
+                    }
+
+                    this.maxCity = xData[0]
+
+
+                    var barChart = echarts.init(document.querySelector(".bar"));
+                    var bar_option = {
+                        color: new echarts.graphic.LinearGradient(
+                            // (x1,y2) 点到点 (x2,y2) 之间进行渐变
+                            0, 0, 0, 1,
+                            [
+                                { offset: 0, color: '#00fffb' }, // 0 起始颜色
+                                { offset: 1, color: '#0061ce' }  // 1 结束颜色
+                            ]
+                        ),
+                        tooltip: {
+                            trigger: 'item',
+                            // axisPointer: {
+                            //     type: 'shadow'
+                            // }
+                        },
+                        grid: {
+                            left: '0%',
+                            right: '3%',
+                            bottom: '3%',
+                            top: '3%',
+                            containLabel: true,
+                            // 是否显示直角坐标系网格
+                            show: true,
+                            //grid 四条边框的颜色
+                            borderColor: 'rgba(71,229,239,0.3)'
+                        },
+                        xAxis: [
+                            {
+                                type: 'category',
+                                data: xData,
+                                axisTick: {
+                                    alignWithLabel: false,
+                                    show: false
+                                },
+                                axisLabel: {
+                                    color: "#4c9bfd"
+                                },
+                                axisLine: {
+                                    lineStyle: {
+                                        color: "rgba(71,229,239,0.3)"
+                                    }
+                                }
+                            }
+                        ],
+                        yAxis: [
+                            {
+                                type: 'value',
+                                axisTick: {
+                                    alignWithLabel: false,
+                                    show: false
+                                },
+                                axisLabel: {
+                                    color: "#4c9bfd"
+                                },
+                                axisLine: {
+                                    lineStyle: {
+                                        color: "rgba(71,229,239,0.3)"
+                                    }
+                                },
+                                splitLine: {
+                                    lineStyle: {
+                                        color: "rgba(71,229,239,0.3)"
+                                    }
+                                }
+                            }
+                        ],
+                        series: [
+                            {
+                                name: '直接访问',
+                                type: 'bar',
+                                barWidth: '60%',
+                                data: yData
+                            }
+                        ]
+                    };
+                    barChart.setOption(bar_option);
+                    // 设置图表可随着浏览器大小等比例缩放调整
+                    window.addEventListener("resize", function () {
+                        barChart.resize();
+                    })
+                })
+
+            },
+            top() {
+                axios.get(`/show/nationTop`).then(response => {
+                    let data = response.data.data;
+                    function fun(a,b) {
+                        return b.value-a.value;
+                    }
+                    data.sort(fun);
+                    this.nationHot = []
+                    for (let i = 0; i < 3; i++) {
+                        this.nationHot.push(data[i]);
+                    }
+
+
+                })
+            },
+            line() {
+
+                this.morningIsActive = true;
+                this.noonIsActive = false;
+                this.nightIsActive = false;
+
+                axios.get(`/show/line/morning`).then(response => {
+
+                    var lineChart = echarts.init(document.querySelector(".line"))
+
+                    this.lineXData = response.data.data;
+                    for (let i = 0; i < this.lineXData.length; i++) {
+                        this.lineXData[i]=Math.round(this.lineXData[i]/10000000);
+                    }
+
+                    var line_option = {
+                        color: ['#00f2f1'],
+                        tooltip: {
+                            trigger: 'axis'
+                        },
+                        legend: {
+                            data: ['实际销售额'],
+                            textStyle: {
+                                color: '#4c9bfd' // 图例文字颜色
+                            },
+                            right: '10%' // 距离右边10%
+                        },
+                        grid: {
+                            top: "20%",
+                            left: '3%',
+                            right: '4%',
+                            bottom: '3%',
+                            containLabel: true,
+                            show: true,// 显示边框
+                            borderColor: '#012f4a'// 边框颜色
+                        },
+                        xAxis: {
+                            type: 'category',
+                            boundaryGap: false,
+                            data: this.lineData.morning,
+                            axisTick: {
+                                show: false // 去除刻度线
+                            },
+                            axisLabel: {
+                                color: '#4c9bfd' // 文本颜色
+                            },
+                            axisLine: {
+                                show: false // 去除轴线
+                            }
+                        },
+                        yAxis: {
+                            type: 'value',
+                            axisTick: {
+                                show: false  // 去除刻度
+                            },
+                            axisLabel: {
+                                color: '#4c9bfd' // 文字颜色
+                            },
+                            splitLine: {
+                                lineStyle: {
+                                    color: '#012f4a' // 分割线颜色
+                                }
+                            }
+                        },
+                        series: [
+                            {
+                                smooth: true,
+                                name:'实际销售额',
+                                type: 'line',
+                                stack: 'Total',
+                                data:  this.lineXData
+                            }
+                        ]
+                    };
+
+                    lineChart.setOption(line_option);
+                    window.addEventListener("resize", function () {
+                        lineChart.resize();
+                    })
+                })
+
+
+
+
+            },
+            morning() {
+                this.morningIsActive = true;
+                this.noonIsActive = false;
+                this.nightIsActive = false;
+
+                axios.get(`/show/line/morning`).then(response => {
+                    var lineChart = echarts.init(document.querySelector(".line"))
+
+                    this.lineXData = response.data.data;
+                    for (let i = 0; i < this.lineXData.length; i++) {
+                        this.lineXData[i]=Math.round(this.lineXData[i]/10000000);
+                    }
+
+                    var line_option = {
+                        color: ['#00f2f1'],
+                        tooltip: {
+                            trigger: 'axis'
+                        },
+                        legend: {
+                            data: ['实际销售额'],
+                            textStyle: {
+                                color: '#4c9bfd' // 图例文字颜色
+                            },
+                            right: '10%' // 距离右边10%
+                        },
+                        grid: {
+                            top: "20%",
+                            left: '3%',
+                            right: '4%',
+                            bottom: '3%',
+                            containLabel: true,
+                            show: true,// 显示边框
+                            borderColor: '#012f4a'// 边框颜色
+                        },
+                        xAxis: {
+                            type: 'category',
+                            boundaryGap: false,
+                            data: this.lineData.morning,
+                            axisTick: {
+                                show: false // 去除刻度线
+                            },
+                            axisLabel: {
+                                color: '#4c9bfd' // 文本颜色
+                            },
+                            axisLine: {
+                                show: false // 去除轴线
+                            }
+                        },
+                        yAxis: {
+                            type: 'value',
+                            axisTick: {
+                                show: false  // 去除刻度
+                            },
+                            axisLabel: {
+                                color: '#4c9bfd' // 文字颜色
+                            },
+                            splitLine: {
+                                lineStyle: {
+                                    color: '#012f4a' // 分割线颜色
+                                }
+                            }
+                        },
+                        series: [
+                            {
+                                smooth: true,
+                                name:'实际销售额',
+                                type: 'line',
+                                stack: 'Total',
+                                data:  this.lineXData
+                            }
+                        ]
+                    };
+
+                    lineChart.setOption(line_option);
+                    window.addEventListener("resize", function () {
+                        lineChart.resize();
+                    })
+                })
+            },
+            noon() {
+                this.morningIsActive = false;
+                this.noonIsActive = true;
+                this.nightIsActive = false;
+                axios.get(`/show/line/noon`).then(response => {
+                    var lineChart = echarts.init(document.querySelector(".line"))
+
+                    this.lineXData = response.data.data;
+                    for (let i = 0; i < this.lineXData.length; i++) {
+                        this.lineXData[i]=Math.round(this.lineXData[i]/10000000);
+                    }
+
+                    var line_option = {
+                        color: ['#00f2f1'],
+                        tooltip: {
+                            trigger: 'axis'
+                        },
+                        legend: {
+                            data: ['实际销售额'],
+                            textStyle: {
+                                color: '#4c9bfd' // 图例文字颜色
+                            },
+                            right: '10%' // 距离右边10%
+                        },
+                        grid: {
+                            top: "20%",
+                            left: '3%',
+                            right: '4%',
+                            bottom: '3%',
+                            containLabel: true,
+                            show: true,// 显示边框
+                            borderColor: '#012f4a'// 边框颜色
+                        },
+                        xAxis: {
+                            type: 'category',
+                            boundaryGap: false,
+                            data: this.lineData.noon,
+                            axisTick: {
+                                show: false // 去除刻度线
+                            },
+                            axisLabel: {
+                                color: '#4c9bfd' // 文本颜色
+                            },
+                            axisLine: {
+                                show: false // 去除轴线
+                            }
+                        },
+                        yAxis: {
+                            type: 'value',
+                            axisTick: {
+                                show: false  // 去除刻度
+                            },
+                            axisLabel: {
+                                color: '#4c9bfd' // 文字颜色
+                            },
+                            splitLine: {
+                                lineStyle: {
+                                    color: '#012f4a' // 分割线颜色
+                                }
+                            }
+                        },
+                        series: [
+                            {
+                                smooth: true,
+                                name:'实际销售额',
+                                type: 'line',
+                                stack: 'Total',
+                                data:  this.lineXData
+                            }
+                        ]
+                    };
+
+                    lineChart.setOption(line_option);
+                    window.addEventListener("resize", function () {
+                        lineChart.resize();
+                    })
+                })
+            },
+            night(){
+                this.morningIsActive = false;
+                this.noonIsActive = false;
+                this.nightIsActive = true;
+                axios.get(`/show/line/night`).then(response => {
+                    var lineChart = echarts.init(document.querySelector(".line"))
+
+                    this.lineXData = response.data.data;
+                    for (let i = 0; i < this.lineXData.length; i++) {
+                        this.lineXData[i]=Math.round(this.lineXData[i]/10000000);
+                    }
+
+                    var line_option = {
+                        color: ['#00f2f1'],
+                        tooltip: {
+                            trigger: 'axis'
+                        },
+                        legend: {
+                            data: ['实际销售额'],
+                            textStyle: {
+                                color: '#4c9bfd' // 图例文字颜色
+                            },
+                            right: '10%' // 距离右边10%
+                        },
+                        grid: {
+                            top: "20%",
+                            left: '3%',
+                            right: '4%',
+                            bottom: '3%',
+                            containLabel: true,
+                            show: true,// 显示边框
+                            borderColor: '#012f4a'// 边框颜色
+                        },
+                        xAxis: {
+                            type: 'category',
+                            boundaryGap: false,
+                            data: this.lineData.night,
+                            axisTick: {
+                                show: false // 去除刻度线
+                            },
+                            axisLabel: {
+                                color: '#4c9bfd' // 文本颜色
+                            },
+                            axisLine: {
+                                show: false // 去除轴线
+                            }
+                        },
+                        yAxis: {
+                            type: 'value',
+                            axisTick: {
+                                show: false  // 去除刻度
+                            },
+                            axisLabel: {
+                                color: '#4c9bfd' // 文字颜色
+                            },
+                            splitLine: {
+                                lineStyle: {
+                                    color: '#012f4a' // 分割线颜色
+                                }
+                            }
+                        },
+                        series: [
+                            {
+                                smooth: true,
+                                name:'实际销售额',
+                                type: 'line',
+                                stack: 'Total',
+                                data:  this.lineXData
+                            }
+                        ]
+                    };
+
+                    lineChart.setOption(line_option);
+                    window.addEventListener("resize", function () {
+                        lineChart.resize();
+                    })
+                })
+            },
+            hot() {
+                axios.get(`/show/hot/province`).then(response => {
+                    this.hotProvince = response.data.data;
+                    var _this = this;
+                    axios.get(`/show/hot/sale/${this.hotProvince[0].city}`).then(response => {
+                        _this.hotSale = response.data.data;
+                    })
+                })
+            },
+            normal() {
+                axios.get(`/show/normal`).then(response => {
+                    let data = response.data.data;
+                    this.normalData = data;
+                    let length = data.length;
+                    if(length/3>0)length/=3
+                    else length = 3
+                    $("#marquee_move").css("animation", `move ${length}s linear infinite`)
+                    $("#marquee_move").hover(function () {
+                        $(this).css("animation-play-state","paused")
+                    },function () {
+                        $(this).css("animation-play-state","running")
+                    })
+                    // 1. 实例化对象
+                    var geoChart = echarts.init(document.querySelector(".geo"));
+
+
+                    function randomData() {
+                        return Math.round(Math.random()*500);
+                    }
+
+
+
+                    var geo_data = [
+                        {name: '北京',value: 0 },{name: '天津',value: 0 },
+                        {name: '上海',value: 0 },{name: '重庆',value: 0 },
+                        {name: '河北',value: 0 },{name: '河南',value: 0 },
+                        {name: '云南',value: 0 },{name: '辽宁',value: 0 },
+                        {name: '黑龙江',value: 0 },{name: '湖南',value: 0 },
+                        {name: '安徽',value: 0 },{name: '山东',value: 0 },
+                        {name: '新疆',value: 0 },{name: '江苏',value: 0 },
+                        {name: '浙江',value: 0 },{name: '江西',value: 0 },
+                        {name: '湖北',value: 0 },{name: '广西',value: 0 },
+                        {name: '甘肃',value: 0 },{name: '山西',value: 0 },
+                        {name: '内蒙古',value: 0 },{name: '陕西',value: 0 },
+                        {name: '吉林',value: 0 },{name: '福建',value: 0 },
+                        {name: '贵州',value: 0 },{name: '广东',value: 0 },
+                        {name: '青海',value: 0 },{name: '西藏',value: 0 },
+                        {name: '四川',value: 0 },{name: '宁夏',value: 0 },
+                        {name: '海南',value: 0 },{name: '台湾',value: 0 },
+                        {name: '香港',value: 0 },{name: '澳门',value: 0 }
+                    ];
+
+                    for (let i = 0; i < data.length; i++) {
+                        for (let j = 0; j < geo_data.length; j++) {
+                            if (data[i].streamConsumeLocation.split(",")[0].includes(geo_data[j].name)){
+                                geo_data[j].value++;
+                            }
+                        }
+                    }
+
+
+                    var geo_option = {
+                        backgroundColor: 'transparent',
+                        tooltip : {
+                            trigger: 'item',
+                            formatter: function(params) {
+                                // console.log(params);
+                                let data = params.data;
+                                // let data2 = data1.data;
+                                console.log(data)
+                                return "<b>异常详情<b><br>"+data.name+"："+data.value;
+                            }
+                        },
+
+
+
+                        //配置属性
+                        series: [{
+                            name: '数据',
+                            type: 'map',
+                            mapType: 'china',
+                            roam: true,
+                            zoom: 1.25,
+                            itemStyle: {
+                                normal: {
+                                    areaColor: "#142957",
+                                    borderColor: "#195BB9",
+                                    borderWidth: 1
+                                },
+                                emphasis: {
+                                    areaColor: "#2B91B7"
+                                }
+                            },
+                            label: {
+                                normal: {
+                                    show: true, //省份名称
+                                    color: "#46bee9",
+                                    width: 1,
+                                    opacity: 0.6,
+                                },
+                                emphasis: {
+                                    show: false
+                                }
+                            },
+                            data:geo_data  //数据
+                        }]
+                    };
+
+
+                    //使用制定的配置项和数据显示图表
+                    geoChart.setOption(geo_option);
+                })
+            },
+            normalPercent() {
+
+                axios.get(`/show/normalPercent`).then(response => {
+                    let data = response.data.data;
+                    this.normalPercentData = data;
+
+                    // 1. 实例化对象
+                    var gaugeChart = echarts.init(document.querySelector(".gauge"));
+                    // 2. 指定数据和配置
+                    var gauge_option = {
+                        series: [
+                            {
+                                name: "销售进度",
+                                type: "pie",
+                                // 放大图形
+                                radius: ['130%', '150%'],
+                                // 移动下位置  套住50%文字
+                                center: ['48%', '80%'],
+                                //是否启用防止标签重叠策略
+                                // avoidLabelOverlap: false,
+                                labelLine: {
+                                    normal: {
+                                        show: false
+                                    }
+                                },
+                                startAngle: 180,
+                                hoverOffset: 0,
+                                data: [
+                                    {
+                                        value: data.percent*2,//value值控制环形面积大小
+                                        itemStyle: {
+                                            color: new echarts.graphic.LinearGradient(
+                                                // (x1,y2) 点到点 (x2,y2) 之间进行渐变
+                                                0,
+                                                0,
+                                                0,
+                                                1,
+                                                [
+                                                    { offset: 0, color: "#00c9e0" }, // 0 起始颜色
+                                                    { offset: 1, color: "#005fc1" } // 1 结束颜色
+                                                ]
+                                            )
+                                        }
+                                    },
+                                    { value: 200-data.percent*2 , itemStyle: { color: '#12274d' } },
+                                    { value: 200 , itemStyle: {color: "transparent"}}
+                                ]
+                            }
+                        ]
+                    };
+                    // 3. 把数据和配置给实例对象
+                    gaugeChart.setOption(gauge_option);
+                    window.addEventListener("resize", function () {
+                        gaugeChart.resize();
+                    })
+                })
+            },
+            provinceChange(city,index) {
+
+                axios.get(`/show/hot/sale/${city}`).then(response => {
+                    this.hotSale = response.data.data;
+                    this.provinceActiveIndex = index
+                })
+            },
+            normalByTime(time) {
+                this.time=time
+                axios.get(`/show/normalByTime?time=${time}`).then(response => {
+                    let data = response.data.data
+                    this.normalByTimeData = data;
+                    if (this.time=='morning'){
+                        this.normalByTimeIndex=0
+                    }else if (this.time=='noon'){
+                        this.normalByTimeIndex=1
+                    }else {
+                        this.normalByTimeIndex=2
+                    }
+                    console.log("this.normalByTimeIndex"+this.normalByTimeIndex)
+                })
+            }
+        },
+        mounted() {
+            this.initData();
+            setInterval(this.initData,15000)
+        }
+    })
+</script>
+</body>
+</html>

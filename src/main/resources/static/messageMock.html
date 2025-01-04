@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <!-- 引入样式 -->
+    <link rel="stylesheet" href="plugins/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="css/elementui.css">
+    <link rel="stylesheet" href="element/index.css">
+    <script src="js/echarts.min.js"></script>
+    <style>
+        body {
+            height: 100%;
+        }
+
+        #app {
+            padding:0 10px;
+        }
+
+        .search{
+            width: 100%;
+            margin-left: 15px;
+        }
+
+        .left {
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 3px 3px 2px #e7e7e7;
+            padding-bottom: 20px;
+            height: 660px;
+            overflow: hidden;
+        }
+
+        .bread {
+            margin-bottom: 20px;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 3px 3px 2px #e7e7e7;
+        }
+
+        .title {
+            width: 100%;
+            height: 50px;
+            margin-bottom: 17px;
+            line-height: 50px;
+        }
+
+        .title span{
+            color: #fff;
+            margin-left: 20px;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .left-title {
+            background: linear-gradient(to right, #0a9f8a, #c0f886);
+        }
+
+        .right-title {
+            background: linear-gradient(to right, #72a4e9, #bfd4db);
+        }
+
+        .left-button {
+            color: #fff;
+            background: linear-gradient(to right, #10cfb4, #b8df90);
+            line-height: 1;
+            text-align: center;
+            font-size: 14px;
+            padding: 12px 20px;
+            border-radius: 4px;
+            font-weight: 500;
+            cursor: pointer;
+            outline: none;  /* 去掉焦点时的轮廓（边框） */
+            border: none;   /* 去掉默认的边框 */
+        }
+
+
+        .left-button:hover{
+            color: #e3e2e2;
+            border-color: #fff;
+        }
+
+        .area {
+            margin-top: 20px;
+            margin-left: 15px;
+            margin-right: 15px;
+        }
+
+
+    </style>
+</head>
+<body>
+<div id="app">
+
+    <div class="bread">
+        <el-breadcrumb separator="/">
+            <el-breadcrumb-item><b style="color: #303133">首页</b></el-breadcrumb-item>
+            <el-breadcrumb-item><b style="color: #303133">Message</b></el-breadcrumb-item>
+            <el-breadcrumb-item>Debug 模拟</el-breadcrumb-item>
+        </el-breadcrumb>
+    </div>
+
+    <el-row :gutter="20">
+        <el-col :span="12">
+            <div class="left">
+                <div class="title left-title">
+                    <span>生产者模拟</span>
+                </div>
+                <div class="search">
+                    <el-select v-model="topicName" placeholder="请选择Topic">
+                        <el-option
+                                v-for="topic in topicList"
+                                :key="topic.name"
+                                :label="topic.name"
+                                :value="topic.name">
+                        </el-option>
+                    </el-select>
+                    &nbsp;
+                    <button @click.prevent="sendMessage" class="left-button"><i class="el-icon-thumb"></i>&nbsp;&nbsp;立即发送</button>
+                </div>
+                <div class="area">
+                    <el-input
+                            type="textarea"
+                            :rows="10"
+                            placeholder="请输入消息内容"
+                            v-model="producerMessage">
+                    </el-input>
+                </div>
+            </div>
+        </el-col>
+        <el-col :span="12">
+            <div class="left">
+                <div class="title right-title">
+                    <span>消费者模拟</span>
+                </div>
+                <div class="search">
+                    <el-select v-model="consumerTopicName" placeholder="请选择Topic">
+                        <el-option
+                                v-for="topic in topicList"
+                                :key="topic.name"
+                                :label="topic.name"
+                                :value="topic.name">
+                        </el-option>
+                    </el-select>
+                    &nbsp;
+                    <el-button type="primary" plain @click="subscribe" :disabled="socket!==null" icon="el-icon-coin">开始消费</el-button>
+                    <el-button type="danger" plain @click="disconnectSubscribe" :disabled="socket===null">停止订阅</el-button>
+                </div>
+                <div class="area">
+                    <el-input
+                            disabled
+                            v-if="socket!==null"
+                            id="subscribeArea"
+                            type="textarea"
+                            :rows="20"
+                            placeholder="消息正在接收中..."
+                            v-model="messages">
+                    </el-input>
+                    <el-empty v-else :image-size="200"></el-empty>
+                </div>
+            </div>
+        </el-col>
+    </el-row>
+</div>
+</body>
+<script src="js/vue.js"></script>
+<script src="js/axios.js"></script>
+<script src="js/elementui.js"></script>
+<script>
+    new Vue({
+        el: "#app",
+        data() {
+            return {
+                topicName:"",
+                consumerTopicName:"",
+                topicList: [],
+                producerMessage:"",
+                socket:null,
+                messages:""
+            }
+        },
+        methods: {
+            getTopicList() {
+                axios.get(`/findTopicList?isInternal=false`)
+                    .then(response => {
+                        this.topicList = response.data
+                    })
+            },
+            sendMessage() {
+                if (this.topicName === null || this.topicName === ""){
+                    this.$message({
+                        message: '请选择要发送的Topic',
+                        type: 'warning'
+                    });
+                    return
+                }
+                if (this.producerMessage === null || this.producerMessage === ""){
+                    this.$message({
+                        message: '请填写消息内容(不能发送空消息)',
+                        type: 'warning'
+                    });
+                    return
+                }
+                let ProduceMockMessageDto = {
+                    topicName: this.topicName,
+                    message: this.producerMessage
+                }
+
+                axios.post(`/producerMockSendMessage`,ProduceMockMessageDto).then(response => {
+                    if (response.data.includes("成功")){
+                        this.$message({
+                            message: response.data,
+                            type: 'success'
+                        });
+                    }else{
+                        this.$message.error(response.data);
+                    }
+                    this.producerMessage = ""
+                })
+            },
+            subscribe() {
+                if (this.consumerTopicName === null || this.consumerTopicName === ""){
+                    this.$message({
+                        message: '请选择要订阅的Topic',
+                        type: 'warning'
+                    });
+                    return
+                }
+                const host = window.location.hostname;
+                let port = window.location.port;
+                this.socket = new WebSocket(`ws://${host}:${port}/ws/`+this.consumerTopicName);
+                this.socket.onopen = () => {
+                    console.log("WebSocket 连接已建立.");
+                };
+                // 接收到消息后处理
+                this.socket.onmessage = (event) => {
+                    // 每次收到新消息时，追加到 Textarea 中并滚动到底部
+                    this.messages += event.data + "\n-----------------------------------------\n";
+                    this.$nextTick(() => {
+                        // 滚动到最后一行
+                        const textarea = document.getElementById("subscribeArea");
+                        textarea.scrollTop = textarea.scrollHeight;
+                    });
+                };
+            },
+            disconnectSubscribe() {
+                if (this.socket) {
+                    this.socket.close();  // 关闭 WebSocket 连接
+                    this.socket = null;   // 清空 socket 对象
+                    console.log("WebSocket 连接关闭 by self.");
+                }
+                this.messages = ""
+            }
+        },
+        created() {
+            this.getTopicList()
+        }
+    });
+</script>
+</html>

@@ -1,0 +1,1694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <!-- 引入样式 -->
+    <link rel="stylesheet" href="plugins/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="css/elementui.css">
+    <link rel="stylesheet" href="element/index.css">
+
+    <style>
+        body {
+            background-color: #f3f4f7;
+            width: 99%;
+            margin: 0;
+
+        }
+
+        .top {
+            width: 100%;
+
+            font-family: Arial, sans-serif;
+            margin-bottom: 10px;
+        }
+        .title {
+            font-size: 25px;
+            font-weight: bold;
+            color: #5ad6a4;
+            letter-spacing: 2px;
+
+            /* 渐变背景 */
+            background: linear-gradient(to right, #0a9f8a, #94e143);
+
+            /* 应用渐变到文本 */
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-fill-color: transparent;
+        }
+
+        .time {
+            font-size: 30px;
+            color: #000;
+            font-weight: bold;
+            line-height: 42px;
+            border-right: 1px solid black;
+            padding-right: 10px;
+            margin-right: 10px;
+        }
+        .date {
+            font-size: 14px;
+            color: #666;
+            float: right;
+            height: 30px;
+        }
+
+        #realtime-week{
+            font-size: 18px;
+            color: #121212;
+        }
+
+        .clusterInfo {
+            width: 100%;
+            height: 130px;
+            border-radius: 12px;
+            background: linear-gradient(to bottom, #04ac93, #19ad48) !important;
+        }
+
+        .average {
+            background-color: #fff;
+            border-radius: 12px;
+            height: 180px;
+        }
+
+        .brokerList {
+            border-radius: 12px;
+            width: 100%;
+            height: 320px;
+            background-color: #fff;
+            margin-top: 15px;
+        }
+
+        .topicRate {
+            border-radius: 12px;
+            width: 100%;
+            height: 270px;
+            background-color: #fff;
+            margin-top: 15px;
+            overflow: hidden;
+        }
+
+        .bottom {
+            margin-top: 10px;
+        }
+
+        .bottom-chart{
+            background-color: #fff;
+            border-radius: 12px;
+            height: 265px;
+            overflow: hidden;
+        }
+
+        .sub-title {
+            font-size: 17px;
+            padding: 10px;
+            padding-bottom: 0px;
+            color: #515256;
+        }
+
+        .average-title {
+            color: #515256;
+            font-size: 13px;
+            margin-left: 5px;
+        }
+
+        .average-title i{
+            color: #0a9f8a;
+        }
+
+        .sub-title i{
+            color: #0a9f8a;
+        }
+
+        .el-table .warning-row {
+            background: #ffffff;
+        }
+
+        .el-table .success-row {
+            background: #f8fdfb;
+        }
+
+        .clusterInfo-icon {
+            float: right;
+            width: 100px;
+            height: 90px;
+            margin: 20px 10px;
+            vertical-align: middle;
+            align-items: center;
+            display: inline-block; /* 使span能够使用背景图 */
+            background-size: contain; /* 使图片完全包含在元素内 */
+            background-position: center; /* 居中显示 */
+            background-repeat: no-repeat; /* 不重复 */
+        }
+
+        .clusterInfo-title {
+            color: #fff;
+            margin-top: 18px;
+            margin-left: 10px;
+            font-size: 21px;
+            font-weight: 600;
+            text-shadow: 0 0 5px #f58f8f;
+        }
+
+        .clusterInfo-data {
+            color: #fff;
+            margin-top: 20px;
+            margin-left: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            white-space: nowrap; /* 确保文本在一行显示 */
+            overflow: hidden; /* 隐藏溢出的内容 */
+            text-overflow: ellipsis; /* 用...代替隐藏的内容 */
+        }
+
+        [v-cloak] {
+            display:none;
+        }
+
+    </style>
+</head>
+<body>
+<div id="app">
+        <div class="top">
+
+            <span class="title">Kafka集群监控大屏看板</span>
+            <span style="float: right">
+                <span class="time" id="realtime-clock">19:03:08</span>
+                <span class="date">
+                    <div id="realtime-week"></div>
+                    <span id="realtime-date"></span>
+                </span>
+            </span>
+        </div>
+        <div class="content">
+            <el-row :gutter="15">
+                <el-col :span="16">
+                    <div>
+                        <el-row :gutter="20">
+                            <el-col :span="6">
+                                <div class="clusterInfo">
+                                    <el-row>
+                                        <el-col :span="12">
+                                            <div class="clusterInfo-title">
+                                                Cluster
+                                            </div>
+                                            <el-tooltip class="item" effect="dark" :content="clusterInfo.id+''" placement="top-start">
+                                                <div class="clusterInfo-data" v-cloak>
+                                                    {{ clusterInfo.id }}
+                                                </div>
+                                            </el-tooltip>
+                                        </el-col>
+                                        <el-col :span="12">
+                                            <span class="clusterInfo-icon" style="background-image: url('images/dashboard/cluster.png')"></span>
+                                        </el-col>
+                                    </el-row>
+                                </div>
+                            </el-col>
+                            <el-col :span="6">
+                                <div class="clusterInfo">
+                                    <el-row>
+                                        <el-col :span="12">
+                                            <div class="clusterInfo-title">
+                                                Controller
+                                            </div>
+                                            <el-tooltip class="item" effect="dark" :content="clusterInfo.controller" placement="top-start">
+                                                <div class="clusterInfo-data" v-cloak>
+                                                    {{ clusterInfo.controller }}
+                                                </div>
+                                            </el-tooltip>
+                                        </el-col>
+                                        <el-col :span="12">
+                                            <span class="clusterInfo-icon" style="background-image: url('images/dashboard/controller.png')"></span>
+                                        </el-col>
+                                    </el-row>
+                                </div>
+                            </el-col>
+                            <el-col :span="6">
+                                <div class="clusterInfo">
+                                    <el-row>
+                                        <el-col :span="12">
+                                            <div class="clusterInfo-title">
+                                                Broker统计
+                                            </div>
+                                            <el-tooltip class="item" effect="dark" :content="clusterInfo.brokerCount+''" placement="top-start">
+                                                <div class="clusterInfo-data" v-cloak>
+                                                    {{ clusterInfo.brokerCount }}
+                                                </div>
+                                            </el-tooltip>
+                                        </el-col>
+                                        <el-col :span="12">
+                                            <span class="clusterInfo-icon" style="background-image: url('images/dashboard/broker.png')"></span>
+                                        </el-col>
+                                    </el-row>
+                                </div>
+                            </el-col>
+                            <el-col :span="6">
+                                <div class="clusterInfo">
+                                    <el-row>
+                                        <el-col :span="12">
+                                            <div class="clusterInfo-title">
+                                                Topic统计
+                                            </div>
+                                            <el-tooltip class="item" effect="dark" :content="clusterInfo.topicCount+''" placement="top-start">
+                                                <div class="clusterInfo-data" v-cloak>
+                                                    {{ clusterInfo.topicCount }}
+                                                </div>
+                                            </el-tooltip>
+                                        </el-col>
+                                        <el-col :span="12">
+                                            <span class="clusterInfo-icon" style="background-image: url('images/dashboard/topic.png')"></span>
+                                        </el-col>
+                                    </el-row>
+                                </div>
+                            </el-col>
+                        </el-row>
+                        <div class="brokerList">
+                            <div class="sub-title">
+                                <i class="el-icon-s-help"></i>
+                                Broker列表
+                            </div>
+                            <div style="width: 98%;height: 100%;padding: 10px">
+                                <el-table
+                                        :data="brokerList"
+                                        style="width: 100%;"
+                                        height="250"
+                                        :row-class-name="tableRowClassName">
+                                    <el-table-column
+                                            prop="id"
+                                            label="id"
+                                            width="50"
+                                    >
+                                    </el-table-column>
+                                    <el-table-column
+                                            prop="host"
+                                            label="主机">
+                                    </el-table-column>
+                                    <el-table-column
+                                            label="端口"
+                                            width="80"
+                                    >
+                                        <template slot-scope="scope">
+                                            <el-tag>{{ scope.row.port }}</el-tag>
+                                        </template>
+                                    </el-table-column>
+                                    <el-table-column
+                                            label="jmx端口"
+                                            width="80"
+                                    >
+                                        <template slot-scope="scope">
+                                            <el-tag type="success">{{ scope.row.jmxPort }}</el-tag>
+                                        </template>
+                                    </el-table-column>
+                                    <el-table-column
+                                            prop="partitionNum"
+                                            label="分区数"
+                                            width="80"
+                                    >
+                                    </el-table-column>
+                                    <el-table-column
+                                            label="累计消息字节数"
+                                            width="120"
+                                    >
+                                        <template slot-scope="scope">
+                                            {{ scope.row.messagesInBytes }} byte
+                                        </template>
+                                    </el-table-column>
+                                    <el-table-column
+                                            prop="jvmThreads"
+                                            label="jvm线程数"
+                                            width="100"
+                                    >
+                                    </el-table-column>
+                                    <el-table-column
+                                            label="jvm内存使用率">
+                                        <template slot-scope="scope">
+                                            <el-progress type="dashboard" :width="50" :percentage="parseFloat((scope.row.jvmUsedMemory*100).toFixed(2))" :color="colors"></el-progress>
+                                        </template>
+                                    </el-table-column>
+                                    <el-table-column
+                                            label="cpu负载">
+                                        <template slot-scope="scope">
+                                            <el-progress type="dashboard" :width="50" :percentage="parseFloat((scope.row.systemCpuLoad*100).toFixed(2))" :color="colors"></el-progress>
+                                        </template>
+                                    </el-table-column>
+                                    <el-table-column
+                                            label="物理内存使用率">
+                                        <template slot-scope="scope">
+                                            <el-progress type="dashboard" :width="50" :percentage="parseFloat((scope.row.usedPhysicalMemorySize/scope.row.totalPhysicalMemorySize*100).toFixed(2))" :color="colors"></el-progress>
+                                        </template>
+                                    </el-table-column>
+                                </el-table>
+                            </div>
+                        </div>
+                    </div>
+                </el-col>
+                <el-col :span="8">
+                    <div>
+                        <el-row :gutter="15">
+                            <el-col :span="12">
+                                <div class="average">
+                                    <div class="average-title">
+                                        <i class="el-icon-s-help"></i>
+                                        平均输入速率
+                                    </div>
+                                    <div id="averageInRate" style="width: 100%;height: 85%">
+
+                                    </div>
+                                </div>
+                            </el-col>
+                            <el-col :span="12">
+                                <div class="average" style="background-color:#0E1327">
+                                    <div class="average-title" style="color: white">
+                                        <i class="el-icon-s-help"></i>
+                                        平均输出速率
+                                    </div>
+                                    <div id="averageOutRate" style="width: 100%;height: 85%">
+
+                                    </div>
+                                </div>
+                            </el-col>
+                        </el-row>
+                        <div class="topicRate">
+                            <div class="sub-title">
+                                <i class="el-icon-s-help"></i>
+                                Topic详情
+                            </div>
+                            <div id="topicRate" style="width: 100%;height: 100%">
+
+                            </div>
+                        </div>
+                    </div>
+                </el-col>
+            </el-row>
+        </div>
+        <div class="bottom">
+            <el-row :gutter="15">
+                <el-col :span="12">
+                    <div class="bottom-chart">
+                        <div class="sub-title">
+                            <i class="el-icon-s-help"></i>
+                            Broker速率趋势
+                            <span style="float: right">
+                                <el-select v-model="brokerIdOption" placeholder="请选择" size="medium" @change="drawBrokerRate">
+                                    <el-option
+                                            v-for="broker in brokerList"
+                                            :key="broker.id"
+                                            :label="broker.host+':'+broker.port"
+                                            :value="broker.id"
+                                    >
+                                    </el-option>
+                                </el-select>
+                            </span>
+                        </div>
+                        <div id="brokerRate" style="width: 100%;height: 100%">
+
+                        </div>
+                    </div>
+                </el-col>
+                <el-col :span="12">
+                    <div class="bottom-chart">
+                        <div class="sub-title">
+                            <i class="el-icon-s-help"></i>
+                            消息总量趋势
+                            <span style="float: right">
+                                <el-select v-model="messageInfo.way" placeholder="请选择" size="medium" @change="drawMessageInfo">
+                                    <el-option
+                                        key="week"
+                                        label="过去一周"
+                                        value="week"
+                                    >
+                                    </el-option>
+                                    <el-option
+                                        key="month"
+                                        label="过去一月"
+                                        value="month"
+                                    >
+                                    </el-option>
+                                </el-select>
+                            </span>
+                        </div>
+                        <div id="messageInfo" style="width: 100%;height: 100%">
+
+                        </div>
+                    </div>
+                </el-col>
+            </el-row>
+        </div>
+
+
+</div>
+</body>
+<script src="js/vue.js"></script>
+<script src="js/axios.js"></script>
+<script src="js/elementui.js"></script>
+<!--调试版-->
+<!--<script src="js/dataV.js"></script>-->
+<script src="js/echarts.min.js"></script>
+
+<script>
+    new Vue({
+        el: "#app",
+        data() {
+            return {
+                intervalId:"",
+                brokerIdOption: "",
+                messageInfo:{
+                    way:"week"
+                },
+                clusterInfo:{
+                    "id": "",
+                    "controller": "",
+                    "brokerCount": 0,
+                    "topicCount": 0
+                },
+                brokerList: [],
+                averageBytesInRate: 0,
+                averageBytesOutRate: 0,
+                colors: [
+                    {color: '#f56c6c', percentage: 20},
+                    {color: '#e6a23c', percentage: 40},
+                    {color: '#5cb87a', percentage: 60},
+                    {color: '#1989fa', percentage: 80},
+                    {color: '#6f7ad3', percentage: 100}
+                ]
+            }
+        },
+        methods: {
+            getClusterInfo() {
+                axios.get(`/dashboard/clusterInfo`).then(response => {
+                    this.clusterInfo = response.data;
+                })
+            },
+            getBrokerList() {
+                axios.get(`/dashboard/brokerInfo`).then(response => {
+                    this.brokerList = response.data;
+                    if (this.brokerList.length > 0){
+                        this.brokerIdOption = this.brokerList[0].id
+                        this.drawBrokerRate()
+                        this.getAverageData()
+                        this.drawAverageOutRate()
+                        this.drawAverageInRate()
+
+                    }
+                })
+            },
+            getBrokerByIdFromBrokerList(id) {
+                let broker = {}
+                for (let i = 0; i < this.brokerList.length; i++) {
+                    if (this.brokerList[i].id === id){
+                        broker = this.brokerList[i]
+                        break
+                    }
+                }
+                return broker
+            },
+            getAverageData() {
+                let a = this.brokerList.reduce((accumulator, broker) => {
+                    return accumulator + broker.bytesOutRate;
+                }, 0) / this.brokerList.length
+                this.averageBytesOutRate = parseFloat(a.toFixed(3));
+                let b = this.brokerList.reduce((accumulator, broker) => {
+                    return accumulator + broker.bytesInRate;
+                }, 0) / this.brokerList.length
+                this.averageBytesInRate = parseFloat(b.toFixed(3));
+            },
+            tableRowClassName({row, rowIndex}) {
+                if (rowIndex%2 === 0) {
+                    return 'warning-row';
+                } else if (rowIndex%2 === 1) {
+                    return 'success-row';
+                }
+                return '';
+            },
+            drawTopicRate() {
+
+                axios.get(`/dashboard/topicInfo`).then(response => {
+                    let elementById = document.getElementById("topicRate");
+                    let topicRate = echarts.init(elementById);
+
+                    let bgColor = "#fff";
+                    let color = [
+                        "#0090FF",
+                        "#36CE9E",
+                        "#FFC005",
+                        "#FF515A",
+                        "#8B5CFF",
+                        "#00CA69"
+                    ];
+
+                    let echartData = response.data;
+
+                    let xAxisData = echartData.map(v => v.topicName);
+                    // ["1", "2", "3", "4", "5", "6", "7", "8"]
+                    let yAxisData1 = echartData.map(v => v.partitionNum);
+                    // [100, 138, 350, 173, 180, 150, 180, 230]
+                    let yAxisData2 = echartData.map(v => v.messageNum);
+                    // [233, 233, 200, 180, 199, 233, 210, 180]
+                    const hexToRgba = (hex, opacity) => {
+                        let rgbaColor = "";
+                        let reg = /^#[\da-f]{6}$/i;
+                        if (reg.test(hex)) {
+                            rgbaColor = `rgba(${parseInt("0x" + hex.slice(1, 3))},${parseInt(
+                                "0x" + hex.slice(3, 5)
+                            )},${parseInt("0x" + hex.slice(5, 7))},${opacity})`;
+                        }
+                        return rgbaColor;
+                    }
+
+                    let option = {
+                        backgroundColor: bgColor,
+                        color: color,
+                        legend: {
+                            right: 10,
+                            top: 1
+                        },
+                        tooltip: {
+                            trigger: "axis",
+                            formatter: function(params) {
+                                let html = '';
+                                params.forEach(v => {
+                                    html += `<div style="color: #666;font-size: 14px;line-height: 24px">
+                <span style="display:inline-block;margin-right:5px;border-radius:10px;width:10px;height:10px;background-color:${color[v.componentIndex]};"></span>
+                ${v.seriesName}:
+                <span style="color:${color[v.componentIndex]};font-weight:700;font-size: 18px">${v.value}</span>
+                                            </div>`;
+                                })
+                                return html
+                            },
+                            extraCssText: 'background: #fff; border-radius: 0;box-shadow: 0 0 3px rgba(0, 0, 0, 0.2);color: #333;',
+                            axisPointer: {
+                                type: 'shadow',
+                                shadowStyle: {
+                                    color: '#ffffff',
+                                    shadowColor: 'rgba(225,225,225,1)',
+                                    shadowBlur: 5
+                                }
+                            }
+                        },
+                        xAxis: [{
+                            type: "category",
+                            boundaryGap: false,
+                            axisLabel: {
+                                formatter: '{value}',
+                                textStyle: {
+                                    color: "#333"
+                                }
+                            },
+                            axisLine: {
+                                lineStyle: {
+                                    color: "#D9D9D9"
+                                }
+                            },
+                            data: xAxisData
+                        }],
+                        yAxis: [{
+                            type: "value",
+                            name: '单位：数量',
+                            axisLabel: {
+                                textStyle: {
+                                    color: "#666"
+                                }
+                            },
+                            nameTextStyle: {
+                                color: "#666",
+                                fontSize: 12,
+                                lineHeight: 40
+                            },
+                            splitLine: {
+                                lineStyle: {
+                                    type: "dashed",
+                                    color: "#E9E9E9"
+                                }
+                            },
+                            axisLine: {
+                                show: false
+                            },
+                            axisTick: {
+                                show: false
+                            }
+                        }],
+                        series: [{
+                            name: "分区数",
+                            type: "line",
+                            smooth: true,
+                            // showSymbol: false,/
+                            symbolSize: 8,
+                            zlevel: 3,
+                            lineStyle: {
+                                normal: {
+                                    color: color[0],
+                                    shadowBlur: 3,
+                                    shadowColor: hexToRgba(color[0], 0.5),
+                                    shadowOffsetY: 8
+                                }
+                            },
+                            areaStyle: {
+                                normal: {
+                                    color: new echarts.graphic.LinearGradient(
+                                        0,
+                                        0,
+                                        0,
+                                        1,
+                                        [{
+                                            offset: 0,
+                                            color: hexToRgba(color[0], 0.3)
+                                        },
+                                            {
+                                                offset: 1,
+                                                color: hexToRgba(color[0], 0.1)
+                                            }
+                                        ],
+                                        false
+                                    ),
+                                    shadowColor: hexToRgba(color[0], 0.1),
+                                    shadowBlur: 5
+                                }
+                            },
+                            data: yAxisData1
+                        }, {
+                            name: "消息数",
+                            type: "line",
+                            smooth: true,
+                            // showSymbol: false,
+                            symbolSize: 8,
+                            zlevel: 3,
+                            lineStyle: {
+                                normal: {
+                                    color: color[1],
+                                    shadowBlur: 3,
+                                    shadowColor: hexToRgba(color[1], 0.5),
+                                    shadowOffsetY: 8
+                                }
+                            },
+                            areaStyle: {
+                                normal: {
+                                    color: new echarts.graphic.LinearGradient(
+                                        0,
+                                        0,
+                                        0,
+                                        1,
+                                        [{
+                                            offset: 0,
+                                            color: hexToRgba(color[1], 0.3)
+                                        },
+                                            {
+                                                offset: 1,
+                                                color: hexToRgba(color[1], 0.1)
+                                            }
+                                        ],
+                                        false
+                                    ),
+                                    shadowColor: hexToRgba(color[1], 0.1),
+                                    shadowBlur: 5
+                                }
+                            },
+                            data: yAxisData2
+                        }]
+                    };
+
+                    topicRate.setOption(option);
+                    // 设置图表可随着浏览器大小等比例缩放调整
+                    window.addEventListener("resize", function () {
+                        topicRate.resize();
+                    })
+
+                    // let len = 0;
+                    // let intervalId = setInterval(() => {
+                    //     if (len === xAxisData.length) {
+                    //         len = 0;
+                    //     }
+                    //     topicRate.dispatchAction({
+                    //         type: 'showTip',
+                    //         seriesIndex: 0,
+                    //         dataIndex: len,
+                    //     });
+                    //     len++;
+                    // }, 1000);
+                    //
+                    // elementById.onmouseover = () => { // 鼠标悬停事件
+                    //     clearInterval(intervalId); // 清除定时器
+                    // };
+                    //
+                    // elementById.onmouseout = () => { // 鼠标离开事件
+                    //     len = 0
+                    //     intervalId = setInterval(() => { // 重新设置定时器
+                    //
+                    //         if (len === xAxisData.length) {
+                    //             len = 0;
+                    //         }
+                    //         topicRate.dispatchAction({
+                    //             type: 'showTip',
+                    //             seriesIndex: 0,
+                    //             dataIndex: len,
+                    //         });
+                    //         len++;
+                    //     }, 1000);
+                    // };
+                })
+
+
+
+            },
+            drawBrokerRate() {
+                let elementById = document.getElementById("brokerRate");
+                let brokerRate = echarts.init(elementById);
+                let xData = ['1秒内','1分钟内','5分钟内','15分钟内']
+
+
+                let broker = this.getBrokerByIdFromBrokerList(this.brokerIdOption);
+
+
+                let yInData = [
+                    broker.bytesInRate,
+                    broker.bytesInOneMinRate,
+                    broker.bytesIn5MinRate,
+                    broker.bytesIn15MinRate
+                ];
+
+
+
+                let yOutData = [
+                    broker.bytesOutRate,
+                    broker.bytesOutOneMinRate,
+                    broker.bytesOut5MinRate,
+                    broker.bytesOut15MinRate
+                ];
+
+                let option = {
+                    tooltip: {
+                        trigger: 'axis',
+                        backgroundColor: 'rgb(8,133,49)', // 设置背景颜色及透明度
+                        axisPointer: {
+                            type: 'cross',
+                            crossStyle: {
+                                color: '#18ad49'
+                            }
+                        },
+                        textStyle: {
+                            color: '#fff', // 设置文字颜色
+                        }
+                    },
+                    toolbox: {
+                        feature: {
+                            dataView: { show: true, readOnly: false },
+                            saveAsImage: { show: true }
+                        },
+                        top:"5%"
+                    },
+                    legend: {
+                        data: ['输入字节', '输出字节']
+                    },
+                    xAxis: [
+                        {
+                            type: 'category',
+                            data: xData,
+                            axisPointer: {
+                                type: 'shadow',
+                                shadowStyle: {
+                                    color: 'rgba(225,224,224,0.3)',
+                                    shadowBlur: 5,
+                                    shadowColor: 'rgba(255, 255, 255, 0.8)',
+                                }
+                            },
+                            axisLabel: {
+                                textStyle: {
+                                    color: '#8f8f8f', // 设置 X 轴标签字体颜色
+                                    fontSize: 12, // 设置 X 轴标签字体大小
+                                }
+                            }
+                        }
+                    ],
+                    yAxis: [
+                        {
+                            type: 'value',
+                            name: '输入字节',
+                            min: 0,
+                            // max: Math.max(...yInData),
+                            interval: 50,
+                            axisLabel: {
+                                formatter: '{value} byte/s',
+                                textStyle: {
+                                    color: '#8f8f8f', // 设置 X 轴标签字体颜色
+                                    fontSize: 8, // 设置 X 轴标签字体大小
+                                }
+                            }
+                        },
+                        {
+                            type: 'value',
+                            name: '输出字节',
+                            min: 0,
+                            // max: Math.max(...yOutData),
+                            interval: 5,
+                            axisLabel: {
+                                formatter: '{value} byte/s',
+                                textStyle: {
+                                    color: '#8f8f8f', // 设置 X 轴标签字体颜色
+                                    fontSize: 8, // 设置 X 轴标签字体大小
+                                }
+                            }
+                        }
+                    ],
+                    series: [
+                        {
+                            name: '输入字节',
+                            type: 'bar',
+                            itemStyle: {
+                                color: '#05ac90' // 设置柱状图颜色为蓝色
+                            },
+                            barWidth: '20%', // 设置柱状图宽度为类目宽度的50%
+                            tooltip: {
+                                valueFormatter: function (value) {
+                                    return value + ' byte/s';
+                                }
+                            },
+                            data: yInData
+                        },
+                        {
+                            name: '输出字节',
+                            type: 'line',
+                            itemStyle: {
+                                color: '#18ad49' // 设置柱状图颜色为蓝色
+                            },
+                            symbolSize: 11, // 设置数据点大小
+                            smooth: true, // 开启平滑效果
+                            areaStyle: { // 定义面积样式
+                                normal: {
+                                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{
+                                        offset: 0,
+                                        color: 'rgba(24, 173, 73, 0.4)' // 面积开始颜色，半透明
+                                    }, {
+                                        offset: 1,
+                                        color: 'rgba(24, 173, 73, 0)' // 面积结束颜色，不透明
+                                    }])
+                                }
+                            },
+                            yAxisIndex: 1,
+                            tooltip: {
+                                valueFormatter: function (value) {
+                                    return value + ' byte/s';
+                                }
+                            },
+                            data: yOutData
+                        }
+                    ]
+                };
+                brokerRate.setOption(option);
+                // 设置图表可随着浏览器大小等比例缩放调整
+                window.addEventListener("resize", function () {
+                    brokerRate.resize();
+                })
+            },
+            drawMessageInfo() {
+
+                axios.get(`/dashboard/messageInfo?way=${this.messageInfo.way}`).then(response => {
+                    let dataObject = response.data;
+
+                    // 提取键并排序
+                    let keys = Object.keys(dataObject)
+                                    .sort((a, b) => new Date(a) - new Date(b))
+
+                    // 初始化 xData 和 yData 数组
+                    let xData = [];
+                    let yData = [];
+
+                    // 遍历排序后的键，提取值
+                    keys.forEach((key, index) => {
+                        xData.push(key.substring(5)); // 将键（日期）添加到 xData
+                        yData.push(dataObject[key]); // 将对应的值添加到 yData
+                    });
+                    let elementById = document.getElementById("messageInfo");
+                    let messageInfo = echarts.init(elementById);
+
+                    const CubeLeft = echarts.graphic.extendShape({
+                        shape: {
+                            x: 0,
+                            y: 0
+                        },
+                        buildPath: function(ctx, shape) {
+                            const xAxisPoint = shape.xAxisPoint
+                            const c0 = [shape.x, shape.y]
+                            const c1 = [shape.x - 9, shape.y - 9]
+                            const c2 = [xAxisPoint[0] - 9, xAxisPoint[1] - 9]
+                            const c3 = [xAxisPoint[0], xAxisPoint[1]]
+                            ctx.moveTo(c0[0], c0[1]).lineTo(c1[0], c1[1]).lineTo(c2[0], c2[1]).lineTo(c3[0], c3[1]).closePath()
+                        }
+                    })
+                    const CubeRight = echarts.graphic.extendShape({
+                        shape: {
+                            x: 0,
+                            y: 0
+                        },
+                        buildPath: function(ctx, shape) {
+                            const xAxisPoint = shape.xAxisPoint
+                            const c1 = [shape.x, shape.y]
+                            const c2 = [xAxisPoint[0], xAxisPoint[1]]
+                            const c3 = [xAxisPoint[0] + 18, xAxisPoint[1] - 9]
+                            const c4 = [shape.x + 18, shape.y - 9]
+                            ctx.moveTo(c1[0], c1[1]).lineTo(c2[0], c2[1]).lineTo(c3[0], c3[1]).lineTo(c4[0], c4[1]).closePath()
+                        }
+                    })
+                    const CubeTop = echarts.graphic.extendShape({
+                        shape: {
+                            x: 0,
+                            y: 0
+                        },
+                        buildPath: function(ctx, shape) {
+                            const c1 = [shape.x, shape.y]
+                            const c2 = [shape.x + 18, shape.y - 9]
+                            const c3 = [shape.x + 9, shape.y - 18]
+                            const c4 = [shape.x - 9, shape.y - 9]
+                            ctx.moveTo(c1[0], c1[1]).lineTo(c2[0], c2[1]).lineTo(c3[0], c3[1]).lineTo(c4[0], c4[1]).closePath()
+                        }
+                    })
+                    echarts.graphic.registerShape('CubeLeft', CubeLeft)
+                    echarts.graphic.registerShape('CubeRight', CubeRight)
+                    echarts.graphic.registerShape('CubeTop', CubeTop)
+
+                    const VALUE = yData
+                    let option = {
+                        tooltip: {
+                            trigger: 'axis',
+                            backgroundColor: 'rgb(8,133,49)',
+                            textStyle: {
+                                color: '#fff'
+                            },
+                            formatter: '{b0}<br/>消息量: {c0}', // 显示系列名称和值
+                            axisPointer: {
+                                type: 'shadow',
+                                shadowStyle: {
+                                    color: 'rgba(225,224,224,0.3)',
+                                    shadowBlur: 5,
+                                    shadowColor: 'rgba(255, 255, 255, 0.8)',
+                                }
+                            }
+                        },
+                        title: {
+                            text: '',
+                            top: 10,
+                            left: 18,
+                            textStyle: {
+                                color: '#00F6FF',
+                                fontSize: 20
+                            }
+                        },
+                        grid: {
+                            left: 20,
+                            right: 40,
+                            bottom: '19%',
+                            top: 30,
+                            containLabel: true
+                        },
+                        xAxis: {
+                            type: 'category',
+                            data: xData,
+                            axisLine: {
+                                show: true,
+                                lineStyle: {
+                                    color: '#8f8f8f'
+                                }
+                            },
+                            offset: 2,
+                            axisTick: {
+                                show: false,
+                                length: 9,
+                                alignWithLabel: true,
+                                lineStyle: {
+                                    color: '#7DFFFD'
+                                }
+                            },
+                            axisLabel: {
+                                fontSize: this.messageInfo.way === 'week' ? 12 : 10
+                            }
+                        },
+                        yAxis: {
+                            type: 'value',
+                            min: 0, // 确保最小值为0
+                            axisLine: {
+                                show: true,
+                                lineStyle: {
+                                    color: '#8f8f8f'
+                                }
+                            },
+                            splitLine: {
+                                show: false
+                            },
+                            axisTick: {
+                                show: false
+                            },
+                            axisLabel: {
+                                fontSize: 14
+                            },
+                            boundaryGap: ['20%', '20%']
+                        },
+                        series: [ {
+                            type: 'custom',
+                            renderItem: (params, api) => {
+                                const location = api.coord([api.value(0), api.value(1)])
+                                return {
+                                    type: 'group',
+                                    children: [{
+                                        type: 'CubeLeft',
+                                        shape: {
+                                            api,
+                                            xValue: api.value(0),
+                                            yValue: api.value(1),
+                                            x: location[0],
+                                            y: location[1],
+                                            xAxisPoint: api.coord([api.value(0), 0])
+                                        },
+                                        style: {
+                                            fill: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{
+                                                offset: 0,
+                                                color: '#04ac93'
+                                            },
+                                                {
+                                                    offset: 1,
+                                                    color: '#19ad48'
+                                                }
+                                            ])
+                                        }
+                                    }, {
+                                        type: 'CubeRight',
+                                        shape: {
+                                            api,
+                                            xValue: api.value(0),
+                                            yValue: api.value(1),
+                                            x: location[0],
+                                            y: location[1],
+                                            xAxisPoint: api.coord([api.value(0), 0])
+                                        },
+                                        style: {
+                                            fill: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{
+                                                offset: 0,
+                                                color: '#04ac93'
+                                            },
+                                                {
+                                                    offset: 1,
+                                                    color: '#19ad48'
+                                                }
+                                            ])
+                                        }
+                                    }, {
+                                        type: 'CubeTop',
+                                        shape: {
+                                            api,
+                                            xValue: api.value(0),
+                                            yValue: api.value(1),
+                                            x: location[0],
+                                            y: location[1],
+                                            xAxisPoint: api.coord([api.value(0), 0])
+                                        },
+                                        style: {
+                                            fill: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{
+                                                offset: 0,
+                                                color: '#12d0b4'
+                                            },
+                                                {
+                                                    offset: 1,
+                                                    color: '#b7df90'
+                                                }
+                                            ])
+                                        }
+                                    }]
+                                }
+                            },
+                            data: VALUE
+                        }, {
+                            type: 'bar',
+                            label: {
+                                normal: {
+                                    show: true,
+                                    position: 'top',
+                                    formatter: (e) => {
+
+                                        switch (e.name) {
+                                            case '12-25':
+                                                return VALUE[0]
+                                            case '公用配变':
+                                                return VALUE[1]
+                                            case '35kV主变':
+                                                return VALUE[2]
+                                            case '水':
+
+                                        }
+                                    },
+                                    fontSize: 14,
+                                    color: '#8f8f8f',
+                                    offset: [4, -25]
+                                }
+                            },
+                            itemStyle: {
+                                color: 'transparent'
+                            },
+                            data: VALUE
+                        }]
+                    }
+                    messageInfo.setOption(option);
+                    // 设置图表可随着浏览器大小等比例缩放调整
+                    window.addEventListener("resize", function () {
+                        messageInfo.resize();
+                    })
+                })
+
+            },
+            drawAverageInRate() {
+                let elementById = document.getElementById("averageInRate");
+                let averageInRate = echarts.init(elementById);
+
+                let uploadedDataURL = "images/dashboard/average-1.png";
+                let Green = {
+                    x: 0,
+                    y: 0,
+                    x2: 0,
+                    y2: 1,
+                    colorStops: [{
+                        offset: 0,
+                        color: '#99da69' // 0% 处的颜色
+                    }, {
+                        offset: 1,
+                        color: '#01babc' // 100% 处的颜色
+                    }],
+                    globalCoord: false // 缺省为 false
+                };
+                let dataValArray = 0.63;
+                let data = this.averageBytesInRate;
+                let subText = 'bytes/s';
+                let option = {
+                    backgroundColor: '#fff',
+                    title: {
+                        text: data,
+                        subtext: subText,
+                        x: 'center',
+                        y: 'center',
+                        textStyle: {
+                            fontSize:24,
+                            fontWeight:'normal',
+                            color: ['#67828c']
+                        },
+                        subtextStyle: {
+                            color: '#67828c',
+                            fontSize: 14,
+                            align: 'center',
+                        }
+                    },
+                    series: [{
+                        //渐变圆环
+                        name: "",
+                        type: "pie",
+                        radius: ["75%", "92%"],
+                        startAngle: 180,
+                        hoverAnimation: false,
+                        avoidLabelOverlap: true,
+                        z: 0,
+                        zlevel: 0,
+                        label: {
+                            show: false,
+                            normal: {show: false}
+                        },
+                        data: [{
+                            value: 0,
+                            name: "",
+                            itemStyle: {
+                                normal: {
+                                    color: Green
+                                }
+                            }
+                        }]
+                    },
+                        {
+                            //仪表盘样式
+                            name: "",
+                            type: "gauge",
+                            radius: "100%",
+                            startAngle: 180,
+                            clockwise:true,
+                            splitNumber: 50,
+                            hoverAnimation: true,
+                            axisTick: {
+                                show: false
+                            },
+                            splitLine: {
+                                length: 12,
+                                lineStyle: {
+                                    width: 1,
+                                    color: "#fff"
+                                }
+                            },
+                            axisLabel: {
+                                show: false
+                            },
+                            pointer: {
+                                show: false
+                            },
+                            axisLine: {
+                                lineStyle: {
+                                    opacity: 0
+                                }
+                            },
+                            detail: {
+                                show: false
+                            },
+                            data: [{
+                                value: Math.round((dataValArray*100)),
+                                name: ""
+                            }]
+                        },
+                        {
+                            //进度圆环
+                            name: 'Line 1',
+                            type: 'pie',
+                            startAngle: 180,
+                            clockWise: true,
+                            radius:['100%','99%'],
+                            itemStyle: {
+                                normal: {
+                                    label: {
+                                        show: true
+                                    },
+                                    labelLine: {
+                                        show: false
+                                    },
+                                }
+                            },
+                            hoverAnimation: false,
+
+                            data: [{
+                                value:  Math.round((dataValArray*100)) ,
+                                itemStyle: {
+                                    normal: {
+                                        color: '#20da97'
+                                    }
+                                }
+                            },{//画中间的图标
+                                name: "",
+                                value: 0,
+                                label: {
+                                    position:'inside',
+                                    backgroundColor: {
+                                        image: uploadedDataURL
+                                    },
+                                    width: 16,
+                                    height: 16,
+                                    borderRadius: 20,
+                                    padding: 1
+                                }
+                            }, {
+                                value: 100- Math.round((dataValArray*100)) ,
+                                name: 'invisible',
+                                itemStyle: {
+                                    normal: {
+                                        color: 'transparent', //未完成的圆环的颜色
+                                        label: {
+                                            show: false
+                                        },
+                                        labelLine: {
+                                            show: false
+                                        }
+                                    }
+                                }
+                            }
+                            ]
+                        }
+                    ]
+                };
+
+                averageInRate.setOption(option);
+                // 设置图表可随着浏览器大小等比例缩放调整
+                window.addEventListener("resize", function () {
+                    averageInRate.resize();
+                })
+            },
+            drawAverageOutRate() {
+                let elementById = document.getElementById("averageOutRate");
+                let averageOutRate = echarts.init(elementById);
+
+
+                let color = new echarts.graphic.LinearGradient(0, 0, 1, 0, [{
+                    offset: 0,
+                    color: '#5CF9FE' // 0% 处的颜色
+                },
+                    {
+                        offset: 0.17,
+                        color: '#468EFD' // 100% 处的颜色
+                    },
+                    {
+                        offset: 0.9,
+                        color: '#468EFD' // 100% 处的颜色
+                    },
+                    {
+                        offset: 1,
+                        color: '#5CF9FE' // 100% 处的颜色
+                    }
+                ]);
+                let colorSet = [
+                    [1, color],
+                    // [0.91, color],
+                    // [1, '#FFF']
+                ];
+                let rich = {
+                    white: {
+                        fontSize: 50,
+                        color: '#fff',
+                        fontWeight: '500',
+                        padding: [-150, 0, 0, 0]
+                    },
+                    bule: {
+                        fontSize: 22,
+                        fontFamily: 'DINBold',
+                        color: '#fff',
+                        fontWeight: '700',
+                        padding: [-30, 0, 0, 40],
+                        marginLeft: 10
+                    },
+                    radius: {
+                        width: 350,
+                        height: 80,
+                        // lineHeight:80,
+                        borderWidth: 1,
+                        borderColor: '#0092F2',
+                        fontSize: 50,
+                        color: '#fff',
+                        backgroundColor: '#1B215B',
+                        borderRadius: 20,
+                        textAlign: 'center',
+                    },
+                    size: {
+                        height: 400,
+                        padding: [100, -20, 0, 0]
+                    },
+                    unit: {
+                        fontSize: 12,
+                        color: '#fff',
+                        padding: [-35, 0, 0, 20]
+                    }
+                }
+                let dataValue = this.averageBytesOutRate;
+                let dataArr = [{
+                    name: '输出速率',
+                    value: dataValue,
+                    unit: 'byte/s'
+                }];
+                let option = {
+                    backgroundColor: '#0E1327',
+                    tooltip: {
+                        formatter: function (params) {
+                            let name = params.data.name;
+                            let value = params.data.value;
+                            let unit = params.data.unit;
+                            return `${name}<br/>${value} ${unit}`
+                        }
+                    },
+                    series: [
+                        {
+                            type: 'gauge',
+                            name: '外层辅助',
+                            radius: '100%',
+                            startAngle: '225',
+                            endAngle: '-45',
+                            splitNumber: '120',
+                            pointer: {
+                                show: false
+                            },
+                            detail: {
+                                show: false,
+                            },
+                            data: [{
+                                value: 1
+                            }],
+                            // data: [{value: 1, name: 90}],
+                            title: {
+                                show: true,
+                                offsetCenter: [0, 30],
+                                textStyle: {
+                                    color: '#fff',
+                                    fontStyle: 'normal',
+                                    fontWeight: 'normal',
+                                    fontFamily: '微软雅黑',
+                                    fontSize: 15,
+                                }
+                            },
+                            axisLine: {
+                                show: true,
+                                lineStyle: {
+                                    color: [
+                                        [1, '#00FFFF']
+                                    ],
+                                    width: 2,
+                                    opacity: 1
+                                }
+                            },
+                            axisTick: {
+                                show: false
+                            },
+                            splitLine: {
+                                show: true,
+                                length: 20,
+                                lineStyle: {
+                                    color: '#051932',
+                                    width: 0,
+                                    type: 'solid',
+                                },
+                            },
+                            axisLabel: {
+                                show: false
+                            }
+                        },
+                        {
+                            type: 'gauge',
+                            radius: '92%',
+                            startAngle: '225',
+                            endAngle: '-45',
+                            pointer: {
+                                show: true
+                            },
+                            detail: {
+                                formatter: function(value) {
+                                    let num = Math.round(value);
+                                    return '{bule|'+dataValue+'}{white|}' + '{size|' + '}' + '{unit|' + dataArr[0].unit + '}';
+                                },
+                                rich: rich,
+                                "offsetCenter": ['0%', "65%"],
+                            },
+                            data: dataArr,
+                            title: {
+                                show: false,
+                            },
+                            axisLine: {
+                                show: true,
+                                lineStyle: {
+                                    color: colorSet,
+                                    width: 10,
+                                    // shadowBlur: 15,
+                                    // shadowColor: '#B0C4DE',
+                                    shadowOffsetX: 0,
+                                    shadowOffsetY: 0,
+                                    opacity: 1
+                                }
+                            },
+                            axisTick: {
+                                show: false
+                            },
+                            splitLine: {
+                                show: false,
+                                length: 25,
+                                lineStyle: {
+                                    color: '#00377a',
+                                    width: 2,
+                                    type: 'solid',
+                                },
+                            },
+                            axisLabel: {
+                                show: false
+                            },
+                            animationDuration: 4000,
+                        },
+                        {
+                            name: '灰色内圈', //刻度背景
+                            type: 'gauge',
+                            z: 2,
+                            radius: '75%',
+                            startAngle: '225',
+                            endAngle: '-45',
+                            //center: ["50%", "75%"], //整体的位置设置
+                            axisLine: { // 坐标轴线
+                                lineStyle: { // 属性lineStyle控制线条样式
+                                    color: [
+                                        [1, '#018DFF']
+                                    ],
+                                    fontSize: 10,
+                                    width: 2,
+                                    opacity: 1, //刻度背景宽度
+                                }
+                            },
+                            splitLine: {
+                                show: false
+                            },
+                            axisLabel: {
+                                show: false
+                            },
+                            pointer: {
+                                show: false
+                            },
+                            axisTick: {
+                                show: false
+                            },
+                            detail: {
+                                show: 0
+                            }
+                        },
+                        {
+                            name: "白色圈刻度",
+                            type: "gauge",
+                            radius: "73%",
+                            startAngle: 225, //刻度起始
+                            endAngle: -45, //刻度结束
+                            min: 0,
+                            max: 120,
+                            splitNumber: 6,
+                            z: 4,
+                            axisTick: {
+                                show: false
+                            },
+                            splitLine: {
+                                length: 5, //刻度节点线长度
+                                lineStyle: {
+                                    width: 2,
+                                    color: '#018DFF'
+                                } //刻度节点线
+                            },
+                            axisLabel: {
+                                color: 'rgba(255,255,255,8)',
+                                fontSize: 10,
+                            }, //刻度节点文字颜色
+                            pointer: {
+                                show: false
+                            },
+                            axisLine: {
+                                lineStyle: {
+                                    opacity: 0
+                                }
+                            },
+                            detail: {
+                                show: false
+                            },
+                            data: [{
+                                value: 0,
+                                name: ""
+                            }]
+                        },
+                        { //内圆
+                            type: 'pie',
+                            radius: '38%',
+                            center: ['50%', '50%'],
+                            z: 1,
+                            itemStyle: {
+                                normal: {
+                                    color: new echarts.graphic.RadialGradient(.5, .5, .8, [{
+                                        offset: 0,
+                                        color: '#4978EC'
+                                    },
+                                        {
+                                            offset: .5,
+                                            color: '#1E2B57'
+                                        },
+                                        {
+                                            offset: 1,
+                                            color: '#141F3D'
+                                        }
+                                    ], false),
+                                    label: {
+                                        show: false
+                                    },
+                                    labelLine: {
+                                        show: false
+                                    }
+                                },
+                            },
+                            hoverAnimation: false,
+                            label: {
+                                show: false,
+                            },
+                            tooltip: {
+                                show: false
+                            },
+                            data: [100],
+                            animationType: "scale"
+                        },
+                        { //外圆
+                            type: 'pie',
+                            radius: '85%',
+                            center: ['50%', '50%'],
+                            z: 0,
+                            itemStyle: {
+                                color: '#141C33',
+                            },
+                            hoverAnimation: false,
+                            label: {
+                                show: false,
+                            },
+                            tooltip: {
+                                show: false
+                            },
+                            data: [120],
+                            animationType: "scale"
+                        }
+                    ]
+                };
+
+                averageOutRate.setOption(option);
+                // 设置图表可随着浏览器大小等比例缩放调整
+                window.addEventListener("resize", function () {
+                    averageOutRate.resize();
+                })
+            },
+            refreshData() {
+                this.getClusterInfo();
+                this.getBrokerList();
+                this.drawTopicRate();
+                this.drawMessageInfo();
+            }
+        },
+        mounted() {
+            this.refreshData(); // 立即刷新一次数据
+            this.intervalId = setInterval(() => {
+                this.refreshData();
+            }, 10000); // 每隔10秒执行一次refreshData方法
+        },
+        beforeDestroy() {
+            // 在组件销毁前清除定时器
+            if (this.intervalId) {
+                clearInterval(this.intervalId);
+            }
+        }
+    });
+</script>
+<script>
+    function updateClock() {
+        let now = new Date(); // 获取当前时间
+        let hours = now.getHours();
+        let minutes = now.getMinutes();
+        let seconds = now.getSeconds();
+        let year = now.getFullYear();
+        let month = (now.getMonth() + 1).toString().padStart(2, '0');
+        let day = now.getDate().toString().padStart(2, '0');
+        let weekDays = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
+        let dayOfWeek = weekDays[now.getDay()];
+
+        // 如果小于10，添加0作为前缀，以保持两位数的格式
+        hours = (hours < 10) ? "0" + hours : hours;
+        minutes = (minutes < 10) ? "0" + minutes : minutes;
+        seconds = (seconds < 10) ? "0" + seconds : seconds;
+
+
+        // 将格式化的日期和时间显示在页面上
+        document.getElementById('realtime-clock').textContent = hours + ":" + minutes + ":" + seconds;
+        document.getElementById('realtime-week').textContent = dayOfWeek;
+        document.getElementById('realtime-date').textContent = year + "-" + month + "-" + day;
+    }
+
+    // 页面加载完成后立即更新时间
+    window.onload = updateClock;
+    setInterval(updateClock, 1000); // 每秒更新时间
+</script>
+
+</html>
