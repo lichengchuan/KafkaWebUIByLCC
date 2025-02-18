@@ -25,6 +25,8 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
     @Autowired
     private AdminClient adminClient;
+    @Autowired
+    private AdminClientConfig adminClientConfig;
 
     // 创建线程池来管理消费者线程
     private final ExecutorService executorService = Executors.newFixedThreadPool(10);
@@ -55,7 +57,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
         // 动态生成一个唯一的 group.id
         String groupId = "consumer-group-" + UUID.randomUUID();
         Properties properties = new Properties();
-        properties.put("bootstrap.servers", AdminClientConfig.host+":"+AdminClientConfig.port);
+        properties.put("bootstrap.servers", adminClientConfig.getBootstrapServers());
         properties.put("group.id", groupId); // 每个 WebSocket 客户端使用一个独立的消费组 ID
         properties.put("key.deserializer", StringDeserializer.class.getName());
         properties.put("value.deserializer", StringDeserializer.class.getName());

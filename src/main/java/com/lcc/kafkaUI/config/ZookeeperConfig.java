@@ -3,12 +3,17 @@ package com.lcc.kafkaUI.config;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.data.Stat;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.List;
 
+/**
+ *
+ */
 @Configuration
+@ConditionalOnProperty(name = "kafka.server-info.type", havingValue = "zookeeper")
 public class ZookeeperConfig {
 
     @Value("${zookeeper.host:localhost}")

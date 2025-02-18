@@ -1,7 +1,7 @@
 package com.lcc.kafkaUI.config;
 
 import com.alibaba.fastjson.JSON;
-import com.lcc.kafkaUI.vo.dashborad.BrokerInfo;
+import lombok.Data;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
@@ -11,25 +11,35 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.io.UnsupportedEncodingException;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
 @Configuration
+@Data
 public class AdminClientConfig {
 
-    public static String host = "localhost";
-    public static Integer port = 9092;
+    public static String DEFAULT_BOOTSTRAP_SERVERS = "localhost:9092";
+    @Value("${kafka.bootstrap.servers:172.24.32.232:9092}")
+    private String bootstrapServers;
 
-
-    @Autowired
+    @Autowired(required = false)
     private ZooKeeper zooKeeper;
 
     @Bean
     public AdminClient adminClient() throws Exception {
+        if(zooKeeper != null){
+            initKafkaNodeInfoByZk();
+        }
+        Properties properties = new Properties();
+        properties.put(org.apache.kafka.clients.admin.AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG,bootstrapServers);
+        properties.put("enable.auto.commit", "false"); // 禁止自动提交偏移量
+        AdminClient adminClient = AdminClient.create(properties);
+        return adminClient;
+    }
 
-
-
+    private void initKafkaNodeInfoByZk() throws KeeperException, InterruptedException, UnsupportedEncodingException {
         // 获取所有Broker ID
         List<String> brokerIds = zooKeeper.getChildren("/brokers/ids", false);
 
@@ -41,15 +51,9 @@ public class AdminClientConfig {
         byte[] data = zooKeeper.getData("/brokers/ids/" + brokerId, false, new Stat());
         String brokerInfoStr = new String(data, "UTF-8");
         Map map = JSON.parseObject(brokerInfoStr, Map.class);
-        host = (String) map.get("host");
-        port = (Integer) map.get("port");
-
-
-        Properties properties = new Properties();
-        properties.put(org.apache.kafka.clients.admin.AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG,host+":"+port);
-        properties.put("enable.auto.commit", "false"); // 禁止自动提交偏移量
-        AdminClient adminClient = AdminClient.create(properties);
-        return adminClient;
+        String host = (String) map.get("host");
+        Integer port = (Integer) map.get("port");
+        bootstrapServers = host + ":" + port;
     }
 
 

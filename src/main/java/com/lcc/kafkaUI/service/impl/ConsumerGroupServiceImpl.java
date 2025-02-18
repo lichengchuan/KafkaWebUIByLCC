@@ -22,6 +22,8 @@ public class ConsumerGroupServiceImpl implements ConsumerGroupService {
 
     @Autowired
     private AdminClient adminClient;
+    @Autowired
+    private AdminClientConfig adminClientConfig;
 
     @Override
     public List<ConsumerGroup> getConsumerGroupList() {
@@ -59,7 +61,7 @@ public class ConsumerGroupServiceImpl implements ConsumerGroupService {
 
             // 为了获取每个分区的最新偏移量（Log End Offset），需要一个 KafkaConsumer 实例
             Properties consumerProps = new Properties();
-            consumerProps.put("bootstrap.servers", com.lcc.kafkaUI.config.AdminClientConfig.host+":"+ AdminClientConfig.port);
+            consumerProps.put("bootstrap.servers",adminClientConfig.getBootstrapServers());
             consumerProps.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
             consumerProps.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
             consumerProps.put("group.id", groupId);
