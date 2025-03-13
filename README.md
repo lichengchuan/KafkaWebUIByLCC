@@ -66,7 +66,7 @@ export KAFKA_JMX_OPTS="-Dcom.sun.management.jmxremote.authenticate=false -Dcom.s
 启动KafkaUILCC容器
 
 ```bash
-docker run -d --name KafkaUILCC -p 8093:8093 -v /usr/local/kafka_UI_LCC/config/application.properties:/application.properties lcc1024/kafka_ui_lcc:1.0
+docker run -d --name KafkaUILCC -p 8093:8093 -v /usr/local/KafkaUILCC/config/application.properties:/application.properties lcc1024/kafka_ui_lcc:1.0
 ```
 
 浏览器输入以下网址即可访问
