@@ -29,7 +29,8 @@ public class TopicServiceImpl implements TopicService {
     @Autowired
     private AdminClient adminClient;
 
-
+    @Autowired
+    private AdminClientConfig adminClientConfig;
     @Override
     public List<Topic> getTopicList(boolean isInternal) {
         List<Topic> result = new ArrayList<>();
@@ -72,7 +73,7 @@ public class TopicServiceImpl implements TopicService {
 
         // 配置 Kafka Consumer
         Properties props = new Properties();
-        props.put("bootstrap.servers", AdminClientConfig.host+":"+ AdminClientConfig.port);
+        props.put("bootstrap.servers",adminClientConfig.getBootstrapServers());
         props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
         props.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
         // 动态生成一个唯一的 group.id  这个Group肯定是要删除的

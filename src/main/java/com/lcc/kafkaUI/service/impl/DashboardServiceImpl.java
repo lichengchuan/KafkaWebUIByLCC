@@ -8,6 +8,7 @@ import com.lcc.kafkaUI.service.DashboardService;
 import com.lcc.kafkaUI.vo.dashborad.BrokerInfo;
 import com.lcc.kafkaUI.vo.dashborad.ClusterInfo;
 import com.lcc.kafkaUI.vo.dashborad.TopicInfo;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.*;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -32,13 +33,17 @@ import java.util.*;
 
 
 @Service
+@Slf4j
 public class DashboardServiceImpl implements DashboardService {
 
     @Autowired
     private AdminClient adminClient;
 
-    @Autowired
+    @Autowired(required = false)
     private ZooKeeper zooKeeper;
+
+    @Autowired
+    private AdminClientConfig adminClientConfig;
 
     private static final int SCALE = 3; // 保留的小数位数
 
@@ -77,28 +82,37 @@ public class DashboardServiceImpl implements DashboardService {
         List<BrokerInfo> result = new ArrayList<>();
 
         try {
-            // 获取所有Broker ID
-            List<String> brokerIds = zooKeeper.getChildren("/brokers/ids", false);
+            if(zooKeeper!=null) {
+                // 获取所有Broker ID
+                List<String> brokerIds = zooKeeper.getChildren("/brokers/ids", false);
 
-            System.out.println("当前活跃的Broker列表:");
-            for (String brokerId : brokerIds) {
-                BrokerInfo brokerInfo = new BrokerInfo();
-                byte[] data = zooKeeper.getData("/brokers/ids/" + brokerId, false, new Stat());
-                String brokerInfoStr = new String(data, "UTF-8");
-                System.out.printf("Broker ID: %s, Info: %s\n", brokerId, brokerInfoStr);
-                Map map = JSON.parseObject(brokerInfoStr, Map.class);
-                Integer jmx_port = (Integer) map.get("jmx_port");
-                String host = (String) map.get("host");
-                Integer port = (Integer) map.get("port");
-                brokerInfo.setId(brokerId);
-                brokerInfo.setHost(host);
-                brokerInfo.setPort(port);
-                brokerInfo.setJmxPort(jmx_port);
-                result.add(brokerInfo);
+                System.out.println("当前活跃的Broker列表:");
+                for (String brokerId : brokerIds) {
+
+                    byte[] data = zooKeeper.getData("/brokers/ids/" + brokerId, false, new Stat());
+                    String brokerInfoStr = new String(data, "UTF-8");
+                    System.out.printf("Broker ID: %s, Info: %s\n", brokerId, brokerInfoStr);
+                    Map map = JSON.parseObject(brokerInfoStr, Map.class);
+                    Integer jmx_port = (Integer) map.get("jmx_port");
+                    String host = (String) map.get("host");
+                    Integer port = (Integer) map.get("port");
+                    initBrokerResult(brokerId, host, port, jmx_port, result);
+                }
+            }else{
+                DescribeClusterResult cluster = adminClient.describeCluster();
+                // 获取所有的Broker节点
+                for (Node node : cluster.nodes().get()) {
+                    System.out.printf("Broker ID: %d, Host: %s, Port: %d%n", node.id(), node.host(), node.port());
+                    initBrokerResult(String.valueOf(node.id()), node.host(), node.port(),null, result);
+                }
             }
 
             //2.连接JMX获取一系列指标
             for (BrokerInfo brokerInfo : result) {
+                if(brokerInfo.getJmxPort()==null){
+                    log.warn("当前Broker没有开启JMX端口,无法获取指标");
+                    continue;
+                }
                 JMXConnector jmxConnector = connectToKafkaJMX(brokerInfo.getHost(), brokerInfo.getJmxPort());
                 MBeanServerConnection mBeanServerConnection = jmxConnector.getMBeanServerConnection();
 
@@ -211,6 +225,15 @@ public class DashboardServiceImpl implements DashboardService {
 
     }
 
+    private static void initBrokerResult(String brokerId, String host, Integer port, Integer jmx_port, List<BrokerInfo> result) {
+        BrokerInfo brokerInfo = new BrokerInfo();
+        brokerInfo.setId(brokerId);
+        brokerInfo.setHost(host);
+        brokerInfo.setPort(port);
+        brokerInfo.setJmxPort(jmx_port);
+        result.add(brokerInfo);
+    }
+
     @Override
     public Map getMessageInfoWithWeek() {
 
@@ -228,7 +251,7 @@ public class DashboardServiceImpl implements DashboardService {
 
             // 配置 Kafka Consumer
             Properties props = new Properties();
-            props.put("bootstrap.servers", AdminClientConfig.host+":"+ AdminClientConfig.port);
+            props.put("bootstrap.servers", adminClientConfig.getBootstrapServers());
             props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
             props.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
             String groupId = "dashboard";
@@ -336,7 +359,7 @@ public class DashboardServiceImpl implements DashboardService {
 
             // 配置 Kafka Consumer
             Properties props = new Properties();
-            props.put("bootstrap.servers", AdminClientConfig.host+":"+AdminClientConfig.port);
+            props.put("bootstrap.servers",adminClientConfig.getBootstrapServers());
             props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
             props.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
             String groupId = "dashboard";
@@ -456,7 +479,7 @@ public class DashboardServiceImpl implements DashboardService {
 
                 // 配置 Kafka Consumer
                 Properties props = new Properties();
-                props.put("bootstrap.servers", AdminClientConfig.host+":"+AdminClientConfig.port);
+                props.put("bootstrap.servers",adminClientConfig.getBootstrapServers());
                 props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
                 props.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
                 String groupId = UUID.randomUUID().toString().replace("-","");
